@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import os, math
+import os, math, requests
 from lib import bottle
 from lib.plugins import SessionPlugin, RequireSession
 
@@ -18,18 +18,72 @@ bottle.install(session)
 bottle.install(require_session)
 
 @bottle.route('/')
-def index(session):
+def index(sesssion):
     return bottle.template('index', debug=settings.DEBUG, session=session)
 
-@bottle.get('/checks/:check_id/metrics')
-def index(session, check_id=None):
-    start_time = int(bottle.request.query.start_time)
-    end_time = int(bottle.request.query.end_time)
-    resolution = int(bottle.request.query.resolution)
+@bottle.get('/mock/entities/:entity_id/checks/:check_id/metrics/:metric_name', skip=require_session)
+def mock_data(session, entity_id=None, check_id=None, metric_name=None):
+    def _to_dict(timestamp, data):
+        return {'timestamp': timestamp, 'numPoints': 10, 'average': {'type': 'l', 'data': data}}
 
-    data = [(t, math.sin(1000*t)) for t in range(start_time, end_time, 1000/resolution)]
+    from_time = int(bottle.request.query['from']) if 'from' in bottle.request.query else 0
+    to_time = int(bottle.request.query['to']) if 'to' in bottle.request.query else 0
+
+
+    if 'resolution' in bottle.request.query:
+        resolution = bottle.request.query['resolution']
+
+        if resolution == 'MIN5':
+            iter = range(from_time, to_time, 60*5)
+        if resolution == 'MIN20':
+            iter = range(from_time, to_time, 60*20)
+        if resolution == 'MIN60':
+            iter = range(from_time, to_time, 60*60)
+        if resolution == 'MIN240':
+            iter = range(from_time, to_time, 60*240)
+        if resolution == 'MIN1440':
+            iter = range(from_time, to_time, 60*1440)
+
+        data = [_to_dict(t, math.sin(float(t)/60/10)) for t in iter]
+
+    elif 'points' in bottle.request.query:
+        points = int(bottle.request.query['points'])
+        iter = range(from_time, to_time, (to_time-from_time)/points)
+        data = [_to_dict(t, math.sin(float(t)/60/10)) for t in iter]
+    else:
+        data = []
+
+    bottle.response.content_type = "application/json"
 
     return json.dumps(data)
+
+@bottle.get('/entities/:entity_id/checks/:check_id/metrics/:metric_name')
+def plot_metric(session, entity_id=None, check_id=None, metric_name=None):
+    def _from_dict(d):
+        return (d['timestamp'], d['average']['data'])
+
+    from_time = int(bottle.request.query['from']) if 'from' in bottle.request.query else 0
+    to_time = int(bottle.request.query['to']) if 'to' in bottle.request.query else 0
+
+    URL_TEMPLATE = 'http://localhost:8080/mock/entities/{entity_id}/checks/{check_id}/metrics/{metric_name}'
+    url = URL_TEMPLATE.format(entity_id=entity_id, check_id=check_id, metric_name=metric_name)
+    payload = {'from': from_time, 'to': to_time}
+
+    if 'resolution' in bottle.request.query:
+        resolution = bottle.request.query['resolution']
+        payload['resolution'] = resolution
+        r = requests.get(url, params=payload)
+        data_dict = r.json
+
+    elif 'points' in bottle.request.query:
+        points = int(bottle.request.query['points'])
+        payload['points'] = points
+        r = requests.get(url, params=payload)
+        data_dict = r.json
+
+    data = [_from_dict(e) for e in data_dict]
+
+    return str(data)
 
 @bottle.get('/login', skip=require_session)
 def login(session):
@@ -73,4 +127,6 @@ def staticsrv(path):
     return bottle.static_file(path, root=STATIC_DIR)
 
 
-bottle.run(host='localhost', port=8080, debug=settings.DEBUG)
+from lib.bottle import PasteServer
+
+bottle.run(host='localhost', port=8080, debug=settings.DEBUG, server=PasteServer)
