@@ -29,6 +29,16 @@ def mock_data(session, entity_id=None, check_id=None, metric_name=None):
     from_time = int(bottle.request.query['from']) if 'from' in bottle.request.query else 0
     to_time = int(bottle.request.query['to']) if 'to' in bottle.request.query else 0
 
+    if metric_name == 'sin':
+        func = lambda t: math.sin(float(t)/60/10)
+    elif metric_name == 'cos':
+        func = lambda t: math.cos(float(t)/60/10)
+    elif metric_name == 'a':
+        func = lambda t: math.sin(float(t)/60/5)
+    elif metric_name == 'b':
+        func = lambda t: math.cos(float(t)/60/5) + 1
+    else:
+        func = lambda t: 0
 
     if 'resolution' in bottle.request.query:
         resolution = bottle.request.query['resolution']
@@ -44,12 +54,12 @@ def mock_data(session, entity_id=None, check_id=None, metric_name=None):
         if resolution == 'MIN1440':
             iter = range(from_time, to_time, 60*1440)
 
-        data = [_to_dict(t, math.sin(float(t)/60/10)) for t in iter]
+        data = [_to_dict(t, func(t)) for t in iter]
 
     elif 'points' in bottle.request.query:
         points = int(bottle.request.query['points'])
         iter = range(from_time, to_time, (to_time-from_time)/points)
-        data = [_to_dict(t, math.sin(float(t)/60/10)) for t in iter]
+        data = [_to_dict(t, func(t)) for t in iter]
     else:
         data = []
 
@@ -60,7 +70,7 @@ def mock_data(session, entity_id=None, check_id=None, metric_name=None):
 @bottle.get('/entities/:entity_id/checks/:check_id/metrics/:metric_name')
 def plot_metric(session, entity_id=None, check_id=None, metric_name=None):
     def _from_dict(d):
-        return (d['timestamp'], d['average']['data'])
+        return {'x': d['timestamp'], 'y': d['average']['data']}
 
     from_time = int(bottle.request.query['from']) if 'from' in bottle.request.query else 0
     to_time = int(bottle.request.query['to']) if 'to' in bottle.request.query else 0
@@ -83,7 +93,10 @@ def plot_metric(session, entity_id=None, check_id=None, metric_name=None):
 
     data = [_from_dict(e) for e in data_dict]
 
-    return str(data)
+    errors = []
+    return bottle.template('plot', debug=settings.DEBUG, errors=errors, session=session,
+                           entity_id=entity_id, check_id=check_id, metric_name=metric_name,
+                           from_time=from_time, to_time=to_time, data=json.dumps(data))
 
 @bottle.get('/login', skip=require_session)
 def login(session):

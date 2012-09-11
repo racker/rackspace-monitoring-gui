@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8">
@@ -22,7 +22,13 @@
 %else:
     <link href="/static/css/bootstrap-responsive.min.css" rel="stylesheet">
 %end
-  
+
+  <link type="text/css" rel="stylesheet" href="/static/rickshaw/rickshaw.min.css">
+
+  <script src="/static/rickshaw/vendor/d3.min.js"></script>
+  <script src="/static/rickshaw/vendor/d3.layout.min.js"></script>
+  <script src="/static/rickshaw/rickshaw.min.js"></script>
+
   </head>
 
   <body>
