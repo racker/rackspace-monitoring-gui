@@ -1,8 +1,11 @@
 #!/usr/bin/env python
 
-import os
+import os, math
 from lib import bottle
 from lib.plugins import SessionPlugin, RequireSession
+
+try: import simplejson as json
+except ImportError: import json
 
 import settings
 
@@ -17,6 +20,16 @@ bottle.install(require_session)
 @bottle.route('/')
 def index(session):
     return bottle.template('index', debug=settings.DEBUG, session=session)
+
+@bottle.get('/checks/:check_id/metrics')
+def index(session, check_id=None):
+    start_time = int(bottle.request.query.start_time)
+    end_time = int(bottle.request.query.end_time)
+    resolution = int(bottle.request.query.resolution)
+
+    data = [(t, math.sin(1000*t)) for t in range(start_time, end_time, 1000/resolution)]
+
+    return json.dumps(data)
 
 @bottle.get('/login', skip=require_session)
 def login(session):
