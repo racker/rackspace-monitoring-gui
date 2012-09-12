@@ -15,7 +15,7 @@ class Session(dict):
 
     @classmethod
     def _validate(cls, session):
-        for key in ['username', 'auth_token', 'url']:
+        for key in ['username', 'api_key','auth_token', 'auth_token_expires', 'monitoring_url']:
             if not session.get(key):
                 return False
         return True

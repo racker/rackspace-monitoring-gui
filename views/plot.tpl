@@ -1,31 +1,48 @@
-%rebase base title='Index', debug=debug, session=session, data=data
-<h1>Plot: Entity: {{entity_id}}, Check: {{check_id}}, Metric: {{metric_name}}<h1>
+%def styles():
+    <style>
+    #chart_container {
+            position: relative;
+            font-family: Arial, Helvetica, sans-serif;
+    }
+    #chart {
+            position: relative;
+            left: 40px;
+    }
+    #y_axis {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+
+            width: 40px;
+    }
+    </style>
+%end
+
+%def scripts():
+    <script src="/static/rickshaw/vendor/d3.min.js"></script>
+    <script src="/static/rickshaw/vendor/d3.layout.min.js"></script>
+    <script src="/static/rickshaw/rickshaw.min.js"></script>
+%end
+
+%def links():
+    <link type="text/css" rel="stylesheet" href="/static/rickshaw/rickshaw.min.css">
+%end
+
+%rebase base title='Index', debug=debug, session=session, scripts=scripts, links=links, styles=styles
 
 <div id="chart_container">
         <div id="y_axis"></div>
         <div id="chart"></div>
 </div>
 
-<style>
-#chart_container {
-        position: relative;
-        font-family: Arial, Helvetica, sans-serif;
-}
-#chart {
-        position: relative;
-        left: 40px;
-}
-#y_axis {
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        width: 40px;
-}
-</style>
-
 <script>
+var data_series = {{!data_series}};
 
-var data = {{!data}};
+series = [];
+
+for(n in data_series) {
+    series.push({color: 'steelblue', data: data_series[n]});
+}
 
 var graph = new Rickshaw.Graph( {
         element: document.querySelector("#chart"),
@@ -34,11 +51,9 @@ var graph = new Rickshaw.Graph( {
         min: 'auto',
         renderer: 'line',
         interpolation: 'linear',
-        series: [ {
-                color: 'steelblue',
-                data: data
-        } ]
+        series: series
 } );
+
 
 var x_axis = new Rickshaw.Graph.Axis.Time( { graph: graph } );
 

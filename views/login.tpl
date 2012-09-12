@@ -16,9 +16,9 @@
     </div>
   </div>
   <div class="control-group">
-    <label class="control-label" for="password">Password</label>
+    <label class="control-label" for="api_key">API Key</label>
     <div class="controls">
-      <input type="password" name="password" id="password" placeholder="password">
+      <input type="password" name="api_key" id="api_key" placeholder="api key">
     </div>
   </div>
   <div class="control-group">

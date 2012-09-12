@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import os, math, requests
+import os, math, requests, random
 from lib import bottle
 from lib.plugins import SessionPlugin, RequireSession
 
@@ -37,6 +37,10 @@ def mock_data(session, entity_id=None, check_id=None, metric_name=None):
         func = lambda t: math.sin(float(t)/60/5)
     elif metric_name == 'b':
         func = lambda t: math.cos(float(t)/60/5) + 1
+    elif metric_name == 'rand':
+        func = lambda t: random.random()
+    elif metric_name == 'randsin':
+        func = lambda t: math.sin(float(t)/60/5) + random.random()/5 - 1
     else:
         func = lambda t: 0
 
@@ -67,36 +71,76 @@ def mock_data(session, entity_id=None, check_id=None, metric_name=None):
 
     return json.dumps(data)
 
-@bottle.get('/entities/:entity_id/checks/:check_id/metrics/:metric_name')
-def plot_metric(session, entity_id=None, check_id=None, metric_name=None):
-    def _from_dict(d):
-        return {'x': d['timestamp'], 'y': d['average']['data']}
+#@bottle.get('/entities/:entity_id/checks/:check_id/metrics/:metric_name')
+@bottle.get('/plot')
+def plot_metrics(session, entity_id=None, check_id=None, metric_name=None):
+    metrics = bottle.request.query.get('metrics', '')
 
     from_time = int(bottle.request.query['from']) if 'from' in bottle.request.query else 0
     to_time = int(bottle.request.query['to']) if 'to' in bottle.request.query else 0
 
-    URL_TEMPLATE = 'http://localhost:8080/mock/entities/{entity_id}/checks/{check_id}/metrics/{metric_name}'
-    url = URL_TEMPLATE.format(entity_id=entity_id, check_id=check_id, metric_name=metric_name)
     payload = {'from': from_time, 'to': to_time}
 
-    if 'resolution' in bottle.request.query:
-        resolution = bottle.request.query['resolution']
-        payload['resolution'] = resolution
-        r = requests.get(url, params=payload)
-        data_dict = r.json
+    def _from_dict(d):
+        return {'x': d['timestamp'], 'y': d['average']['data']}
 
-    elif 'points' in bottle.request.query:
-        points = int(bottle.request.query['points'])
-        payload['points'] = points
-        r = requests.get(url, params=payload)
-        data_dict = r.json
+    def _get_data(metric):
+        URL_TEMPLATE = 'http://localhost:8080'
+        if 'resolution' in bottle.request.query:
+            resolution = bottle.request.query['resolution']
+            payload['resolution'] = resolution
+            r = requests.get(URL_TEMPLATE + metric, params=payload)
+            data_dict = r.json
 
-    data = [_from_dict(e) for e in data_dict]
+        elif 'points' in bottle.request.query:
+            points = int(bottle.request.query['points'])
+            payload['points'] = points
+            r = requests.get(URL_TEMPLATE + metric, params=payload)
+            data_dict = r.json
+
+        return [_from_dict(e) for e in data_dict]
+
+    data_series = [_get_data(metric) for metric in metrics.split(',')]
 
     errors = []
     return bottle.template('plot', debug=settings.DEBUG, errors=errors, session=session,
-                           entity_id=entity_id, check_id=check_id, metric_name=metric_name,
-                           from_time=from_time, to_time=to_time, data=json.dumps(data))
+                           from_time=from_time, to_time=to_time, data_series=json.dumps(data_series))
+
+def _auth_request(session, request_func, path, *args, **kwargs):
+    headers = kwargs.pop('headers', dict())
+    headers['X-Auth-Token'] = session['auth_token']
+    return request_func(session['monitoring_url'] + path, *args, headers=headers, **kwargs)
+
+@bottle.get('/entities')
+def get_entities(session):
+    r = _auth_request(session, requests.get, '/entities')
+
+    errors = []
+    return bottle.template('entities', debug=settings.DEBUG, errors=errors, session=session, entities=r.json['values'])
+
+@bottle.get('/entities/:entity_id')
+def get_entity(session, entity_id=None):
+    r_entity = _auth_request(session, requests.get, '/entities/' + entity_id)
+    r_checks = _auth_request(session, requests.get, '/entities/' + entity_id + '/checks')
+
+    errors = []
+    return bottle.template('entity', debug=settings.DEBUG, errors=errors, session=session, entity=r_entity.json, checks=r_checks.json['values'])
+
+@bottle.get('/entities/:entity_id/checks')
+def get_checks(session, entity_id=None):
+    return ""
+
+@bottle.get('/entities/:entity_id/checks/:checkid')
+def get_check(session, entity_id=None, check_id=None):
+    return ""
+
+@bottle.get('/entities/:entity_id/checks/:checkid/metrics')
+def get_metrics(session, entity_id=None, check_id=None):
+    return ""
+
+@bottle.get('/entities/:entity_id/checks/:checkid/metrics/metric_name')
+def get_metric(session, entity_id=None, check_id=None):
+    return ""
 
 @bottle.get('/login', skip=require_session)
 def login(session):
@@ -110,19 +154,29 @@ def login(session):
 @bottle.post('/login', skip=require_session)
 def login(session):
     username = bottle.request.forms.get('username')
-    password = bottle.request.forms.get('password')
+    api_key = bottle.request.forms.get('api_key')
 
-    print username, password
+    print username, api_key
+
+    def _auth_body(username, api_key):
+        return json.dumps({"credentials": {"username":username, "key":api_key }})
 
     errors = []
-    if username and password:
-        # TODO: actually login
+    if username and api_key:
+        r = requests.post('https://auth.api.rackspacecloud.com/v1.1/auth',
+                          headers={'Content-type': 'application/json'},
+                          data=_auth_body(username, api_key))
+
         session['username'] = username
-        session['auth_token'] = 'aaa-bbb-ccc'
-        session['url'] = 'https://blah.com'
+        session['api_key'] = api_key
+        session['auth_token'] = r.json['auth']['token']['id']
+        session['auth_token_expires'] = r.json['auth']['token']['expires']
+        session['monitoring_url'] = r.json['auth']['serviceCatalog']['cloudMonitoring'][0]['publicURL']
+
         session.save()
+
         bottle.response.status = 303
-        bottle.response.set_header('Location', '/')
+        bottle.response.set_header('Location', '/entities')
         return bottle.response
     else:
         errors.append('Invalid username or password.')

@@ -23,11 +23,23 @@
     <link href="/static/css/bootstrap-responsive.min.css" rel="stylesheet">
 %end
 
-  <link type="text/css" rel="stylesheet" href="/static/rickshaw/rickshaw.min.css">
+%try:
+  %styles()
+%except NameError:
+  %pass
+%end
 
-  <script src="/static/rickshaw/vendor/d3.min.js"></script>
-  <script src="/static/rickshaw/vendor/d3.layout.min.js"></script>
-  <script src="/static/rickshaw/rickshaw.min.js"></script>
+%try:
+  %links()
+%except NameError:
+  %pass
+%end
+
+%try:
+  %scripts()
+%except NameError:
+  %pass
+%end
 
   </head>
 
