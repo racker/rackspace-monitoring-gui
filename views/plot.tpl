@@ -5,7 +5,6 @@
             height: 400px;
     }
 
-
     </style>
 %end
 
@@ -24,33 +23,7 @@
     <div class="span3">
         <ul class="nav nav-list" id="entitylist">
             <li class="nav-header">Entities</li>
-            <!--<li><a href="#">Entity 1</a>
-                <ul class="nav nav-list">
-                    <li class="nav-header">Checks</li>
-                    <li class="">
-                        <a href="#">Check 1a</a>
-                        <ul class="nav nav-list">
-                            <li class="nav-header">Metrics</li>
-                            <li class=""><a href="#">Metric 1ai</a></li>
-                            <li><a href="#">Metric 1aii</a></li>
-                        </ul>
-                    </li>
-                    <li><a href="#">Check 1b</a></li>
-                </ul>
-            </li>
-            <li>
-                <a href="#">Entity 2</a>
-                <ul class="nav nav-list">
-                    <li class="nav-header">Checks</li>
-                    <li class=""><a href="#">Check 2a</a></li>
-                    <li><a href="#">Check 2b</a></li>
-                </ul>
-            </li>
-            <li>Foo</li>
-        -->
         </ul>
-
-
       </div>
     <div class="span9" id="chart">
         <svg></svg>
