@@ -45,14 +45,14 @@ chart.yAxis
     .axisLabel('')
     .tickFormat(d3.format('.02f'));
 
-nv.utils.windowResize(chart.update);
 
 nv.addGraph(function() {
   d3.select('#chart svg')
-      //.datum({})
       .call(chart);
   return chart;
 });
+
+nv.utils.windowResize(function() { d3.select('#chart svg').call(chart.update) });
 
 function metricHash(entity_id, check_id, metric_name) {
     return $entity_id + $check_id + $metric_name;
