@@ -30,17 +30,17 @@ def mock_data(session, entity_id=None, check_id=None, metric_name=None):
     to_time = int(bottle.request.query['to']) if 'to' in bottle.request.query else 0
 
     if metric_name == 'sin':
-        func = lambda t: math.sin(float(t)/60/10)
+        func = lambda t: math.sin(float(t)/60/60)
     elif metric_name == 'cos':
-        func = lambda t: math.cos(float(t)/60/10)
+        func = lambda t: math.cos(float(t)/60/60)
     elif metric_name == 'a':
-        func = lambda t: math.sin(float(t)/60/5)
+        func = lambda t: math.sin(float(t)/60/30)
     elif metric_name == 'b':
-        func = lambda t: math.cos(float(t)/60/5) + 1
+        func = lambda t: math.cos(float(t)/60/30) + 1
     elif metric_name == 'rand':
         func = lambda t: random.random()
     elif metric_name == 'randsin':
-        func = lambda t: math.sin(float(t)/60/5) + random.random()/5 - 1
+        func = lambda t: math.sin(float(t)/60/30) + random.random()/5 - 1
     else:
         func = lambda t: 0
 
@@ -79,32 +79,11 @@ def plot_metrics(session, entity_id=None, check_id=None, metric_name=None):
     from_time = int(bottle.request.query['from']) if 'from' in bottle.request.query else 0
     to_time = int(bottle.request.query['to']) if 'to' in bottle.request.query else 0
 
-    payload = {'from': from_time, 'to': to_time}
-
-    def _from_dict(d):
-        return {'x': d['timestamp'], 'y': d['average']['data']}
-
-    def _get_data(metric):
-        URL_TEMPLATE = 'http://localhost:8080'
-        if 'resolution' in bottle.request.query:
-            resolution = bottle.request.query['resolution']
-            payload['resolution'] = resolution
-            r = requests.get(URL_TEMPLATE + metric, params=payload)
-            data_dict = r.json
-
-        elif 'points' in bottle.request.query:
-            points = int(bottle.request.query['points'])
-            payload['points'] = points
-            r = requests.get(URL_TEMPLATE + metric, params=payload)
-            data_dict = r.json
-
-        return [_from_dict(e) for e in data_dict]
-
-    data_series = [_get_data(metric) for metric in metrics.split(',')]
+    get_vars = "?from=" + str(from_time) + "&to=" + str(to_time) + "&points=200"
 
     errors = []
     return bottle.template('plot', debug=settings.DEBUG, errors=errors, session=session,
-                           from_time=from_time, to_time=to_time, data_series=json.dumps(data_series))
+                           from_time=from_time, to_time=to_time, get_vars=get_vars)
 
 def _auth_request(session, request_func, path, *args, **kwargs):
     headers = kwargs.pop('headers', dict())
@@ -115,6 +94,9 @@ def _auth_request(session, request_func, path, *args, **kwargs):
 def get_entities(session):
     r = _auth_request(session, requests.get, '/entities')
 
+    if 'json' in bottle.request.query and bottle.request.query['json'] == 'true':
+        return json.dumps(r.json['values'])
+
     errors = []
     return bottle.template('entities', debug=settings.DEBUG, errors=errors, session=session, entities=r.json['values'])
 
@@ -123,6 +105,9 @@ def get_entity(session, entity_id=None):
     r_entity = _auth_request(session, requests.get, '/entities/' + entity_id)
     r_checks = _auth_request(session, requests.get, '/entities/' + entity_id + '/checks')
 
+    if 'json' in bottle.request.query and bottle.request.query['json'] == 'true':
+        return json.dumps(r_checks.json['values'])
+
     errors = []
     return bottle.template('entity', debug=settings.DEBUG, errors=errors, session=session, entity=r_entity.json, checks=r_checks.json['values'])
 
@@ -130,15 +115,15 @@ def get_entity(session, entity_id=None):
 def get_checks(session, entity_id=None):
     return ""
 
-@bottle.get('/entities/:entity_id/checks/:checkid')
+@bottle.get('/entities/:entity_id/checks/:check_id')
 def get_check(session, entity_id=None, check_id=None):
     return ""
 
-@bottle.get('/entities/:entity_id/checks/:checkid/metrics')
+@bottle.get('/entities/:entity_id/checks/:check_id/metrics')
 def get_metrics(session, entity_id=None, check_id=None):
-    return ""
+    return json.dumps( [{'metricName': 'sin'}, {'metricName': 'cos'}, {'metricName': 'a'}, {'metricName': 'randsin'} ] )
 
-@bottle.get('/entities/:entity_id/checks/:checkid/metrics/metric_name')
+@bottle.get('/entities/:entity_id/checks/:check_id/metrics/metric_name')
 def get_metric(session, entity_id=None, check_id=None):
     return ""
 

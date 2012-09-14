@@ -41,6 +41,14 @@
   %pass
 %end
 
+%if debug:
+    <script src="/static/js/jquery.js"></script>
+    <script src="/static/js/bootstrap.js"></script>
+%else:
+    <script src="/static/js/jquery.min.js"></script>
+    <script src="/static/js/bootstrap.min.js"></script>
+%end
+
   </head>
 
   <body>
@@ -63,21 +71,14 @@
 	      <li><a href="/login">(Login)</a></li>
 %end
 	    </ul>
-          </div><!--/.nav-collapse -->
+          </div>
         </div>
       </div>
     </div>
 
     <div class="container">
 %include
-    </div> <!-- /container -->
+    </div>
 
-%if debug:
-    <script src="/static/js/jquery.js"></script>
-    <script src="/static/js/bootstrap.js"></script>
-%else:
-    <script src="/static/js/jquery.min.js"></script>
-    <script src="/static/js/bootstrap.min.js"></script>
-%end
   </body>
 </html>
