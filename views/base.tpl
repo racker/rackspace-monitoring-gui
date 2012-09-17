@@ -44,9 +44,11 @@
 %if debug:
     <script src="/static/js/jquery.js"></script>
     <script src="/static/js/bootstrap.js"></script>
+    <script src="/static/js/jquery.ba-resize.js"></script>
 %else:
     <script src="/static/js/jquery.min.js"></script>
     <script src="/static/js/bootstrap.min.js"></script>
+    <script src="/static/js/jquery.ba-resize.js"></script>
 %end
 
   </head>

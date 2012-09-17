@@ -52,7 +52,7 @@ nv.addGraph(function() {
   return chart;
 });
 
-nv.utils.windowResize(function() { d3.select('#chart svg').call(chart.update) });
+$("#chart").resize(function() {d3.select('#chart svg').call(chart)});
 
 function metricHash(entity_id, check_id, metric_name) {
     return $entity_id + $check_id + $metric_name;
