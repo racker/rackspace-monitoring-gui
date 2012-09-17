@@ -26,15 +26,15 @@
         </ul>
       </div>
     <div class="span9" id="chart">
-        <div class="btn-group">
+        <div class="btn-group" id="daterangeselect" class="pull-right">
             <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">Time Scale<span class="caret"></span></a>
             <ul class="dropdown-menu">
-                <li onclick="setDateRange('hour', true)">Last hour</li>
-                <li onclick="setDateRange('day', true)">Last day</li>
-                <li onclick="setDateRange('week', true)">Last week</li>
-                <li onclick="setDateRange('month', true)">Last month</li>
-                <li onclick="setDateRange('6month', true)">Last 6 months</li>
-                <li onclick="setDateRange('year', true)">Last year</li>
+                <li><a href="#" onclick="setDateRange('hour', true)">Last hour</a></li>
+                <li><a href="#" onclick="setDateRange('day', true)">Last day</a></li>
+                <li><a href="#" onclick="setDateRange('week', true)">Last week</a></li>
+                <li><a href="#" onclick="setDateRange('month', true)">Last month</a></li>
+                <li><a href="#" onclick="setDateRange('6month', true)">Last 6 months</a></li>
+                <li><a href="#" onclick="setDateRange('year', true)">Last year</a></li>
             </ul>
         </div>
 
@@ -190,30 +190,23 @@ function reloadData(update) {
     }
 }
 
+HOUR = 60*60;
+DATERANGES = {
+    "hour": {text: "Last hour", offset: HOUR},
+    "day": {text: "Last day", offset: 24*HOUR},
+    "week": {text: "Last week", offset: 7*24*HOUR},
+    "month": {text: "Last month", offset: 30*24*HOUR},
+    "6month": {text: "Last 6 months", offset: 182*24*HOUR},
+    "year": {text: "Last year", offset: 365*24*HOUR}
+};
+
 function setDateRange(range, update) {
-    ts = timestamp();
+    var ts = timestamp();
     TO = ts;
+    FROM = ts-DATERANGES[range].offset;
 
-    hour = 60*60
-    if(range == "hour") {
-        FROM = ts-hour;
-
-    } else if(range=="day") {
-        FROM = ts-24*hour;
-
-    } else if(range=="week") {
-        FROM = ts-24*7*hour;
-
-    } else if(range=="month") {
-        FROM = ts-24*30*hour;
-
-    } else if(range=="6month") {
-        FROM = ts-24*182*hour;
-
-    } else if(range=="year") {
-        FROM = ts-24*365*hour;
-
-    }
+    var drs = $("#daterangeselect > a");
+    drs.text(DATERANGES[range].text + ' ').append($('<span>').attr('class', 'caret'));
 
     reloadData(update);
 }
@@ -318,6 +311,7 @@ nv.addGraph(function() {
 });
 
 
+setDateRange('day');
 $("#chart").resize(updateChart);
 
 
