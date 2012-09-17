@@ -74,16 +74,8 @@ def mock_data(session, entity_id=None, check_id=None, metric_name=None):
 #@bottle.get('/entities/:entity_id/checks/:check_id/metrics/:metric_name')
 @bottle.get('/plot')
 def plot_metrics(session, entity_id=None, check_id=None, metric_name=None):
-    metrics = bottle.request.query.get('metrics', '')
-
-    from_time = int(bottle.request.query['from']) if 'from' in bottle.request.query else 0
-    to_time = int(bottle.request.query['to']) if 'to' in bottle.request.query else 0
-
-    get_vars = "?from=" + str(from_time) + "&to=" + str(to_time) + "&points=200"
-
     errors = []
-    return bottle.template('plot', debug=settings.DEBUG, errors=errors, session=session,
-                           from_time=from_time, to_time=to_time, get_vars=get_vars)
+    return bottle.template('plot', debug=settings.DEBUG, errors=errors, session=session)
 
 def _auth_request(session, request_func, path, *args, **kwargs):
     headers = kwargs.pop('headers', dict())
