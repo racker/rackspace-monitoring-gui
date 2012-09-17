@@ -41,7 +41,7 @@
         <svg></svg>
 
         <table class="table" id="metrictable">
-            <tr><th>Entity</th><th>Check</th><th>Metric</th></tr>
+            <tr><th>Entity Name</th><th>Check Name</th><th>Metric Name</th></tr>
         </table>
     </div>
 </div>
@@ -76,15 +76,15 @@ function nextColor() {
 
 function Series(entity_id, check_id, metric_name) {
     this.values = [];
-    this.color = nextColor();;
+    this.color = undefined;
     this.entity_id = entity_id;
     this.check_id = check_id;
     this.metric_name = metric_name;
     this.name = "foo";
 }
 
-function toKey(entity_id, check_id, metric_name) {
-    return [entity_id, check_id, metric_name].join();
+function toKey(series) {
+    return [series.entity_id, series.check_id, series.metric_name].join();
 }
 
 function fromKey(str) {
@@ -92,12 +92,11 @@ function fromKey(str) {
     return {'entity_id': list[0], 'check_id': list[1], 'metric_name': list[2]}
 }
 
-function getMetricUrl(key, from, to) {
-    var metric = fromKey(key);
+function getMetricUrl(series) {
 
-    return "/mock/entities/" + metric.entity_id +
-        "/checks/" + metric.check_id +
-        "/metrics/" + metric.metric_name +
+    return "/mock/entities/" + series.entity_id +
+        "/checks/" + series.check_id +
+        "/metrics/" + series.metric_name +
         "?from=" + FROM + "&to=" + TO + "&points=200";
 }
 
@@ -111,12 +110,12 @@ function toValues(data, name) {
 
 function getDatumList(dict) {
     list = [];
-    for( s in SERIES ){
-        list.push( {values: SERIES[s].values,
-                    color: SERIES[s].color,
-                    key: SERIES[s].name});
+    for( n in SERIES ){
+        s = SERIES[n];
+        list.push( {values: s.values,
+                    color: s.color,
+                    key: s.name});
     }
-    console.log(list);
     return list;
 }
 
@@ -132,8 +131,8 @@ function updateChart() {
     for(n in SERIES) {
         s = SERIES[n];
         target.append($('<tr>')
-            .append($('<td>').append(s.entity_id),
-                    $('<td>').append(s.check_id),
+            .append($('<td>').append(s.entity_label),
+                    $('<td>').append(s.check_label),
                     $('<span>').attr('class', 'label')
                                 .attr('style', 'background-color:' + s.color).append(s.metric_name)
             )
@@ -141,37 +140,41 @@ function updateChart() {
     }
 }
 
-function addSeries(entity_id, check_id, metric_name, update) {
-    var key = toKey(entity_id, check_id, metric_name);
-    SERIES[key] = new Series(entity_id, check_id, metric_name);
-
-    return jQuery.getJSON(getMetricUrl(key, FROM, TO), function(response) {
-        SERIES[key].values = toValues(response);
-        SERIES[key].name = metric_name;
+function loadSeriesData(s, update) {
+    return jQuery.getJSON(getMetricUrl(s), function(response) {
+        s.values = toValues(response);
+        s.name = s.metric_name;
         if(update) updateChart();
     })
 }
 
-function removeSeries(entity_id, check_id, metric_name, update) {
-    var key = toKey(entity_id, check_id, metric_name);
+function addSeries(s, update) {
+    var key = toKey(s);
+    SERIES[key] = s;
+    s.color = nextColor();
+    return loadSeriesData(s, update);
+}
+
+function removeSeries(s, update) {
+    var key = toKey(s);
     delete SERIES[key];
     if(update) updateChart();
 }
 
-function toggleSeries(entity_id, check_id, metric_name, update){
-    var key = toKey(entity_id, check_id, metric_name);
+function toggleSeries(s, update){
+    var key = toKey(s);
 
     if(key in SERIES){
-        removeSeries(entity_id, check_id, metric_name, update);
+        removeSeries(SERIES[key], update);
     } else {
-        addSeries(entity_id, check_id, metric_name, update);
+        addSeries(s, update);
     }
 }
 
 function resetSeries(update) {
     for( key in SERIES ) {
         var s = SERIES(key);
-        removeSeries(s.entity_id, s.check_id, s.metric_name, false);
+        removeSeries(s, false);
     }
     if(update) updateChart();
 }
@@ -180,8 +183,7 @@ function reloadData(update) {
     var deferreds = [];
     for(key in SERIES) {
         var s = SERIES[key];
-        removeSeries(s.entity_id, s.check_id, s.metric_name, false);
-        deferreds.push(addSeries(s.entity_id, s.check_id, s.metric_name, false))
+        deferreds.push(loadSeriesData(s), false);
     }
     if (update) {
         $.when.apply($, deferreds).done(updateChart);
@@ -220,9 +222,16 @@ function metricClick(event) {
     var target = $(event.target);
     var metric_name = target.attr('id');
     var check_id = target.parent().parent().parent().children('a')[0].id;
-    var entity_id = target.parent().parent().parent().parent().parent().children('a')[0].id;
+    var check_label = target.parent().parent().parent().children('a')[0].text;
 
-    toggleSeries(entity_id, check_id, metric_name, true);
+    var entity_id = target.parent().parent().parent().parent().parent().children('a')[0].id;
+    var entity_label = target.parent().parent().parent().parent().parent().children('a')[0].text;
+
+    var s = new Series(entity_id, check_id, metric_name);
+    s.entity_label = entity_label;
+    s.check_label = check_label;
+
+    toggleSeries(s, true);
 }
 
 function checkClick(event) {
