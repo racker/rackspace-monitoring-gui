@@ -21,6 +21,9 @@
         .nvd3 .nv-groups path.nv-line {
             stroke-width: 1.5px;
         }
+        .nv-legendWrap {
+            display: none;
+        }
     </style>
 %end
 
