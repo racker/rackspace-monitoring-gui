@@ -5,6 +5,7 @@
             height: 400px;
     }
 
+
     </style>
 %end
 
@@ -15,6 +16,12 @@
 
 %def links():
     <link href="../static/nvd3/src/nv.d3.css" rel="stylesheet" type="text/css">
+
+    <style>
+        .nvd3 .nv-groups path.nv-line {
+            stroke-width: 1.5px;
+        }
+    </style>
 %end
 
 %rebase base title='Plot', debug=debug, session=session, scripts=scripts, links=links, styles=styles
@@ -97,7 +104,7 @@ function getMetricUrl(series) {
     return "/mock/entities/" + series.entity_id +
         "/checks/" + series.check_id +
         "/metrics/" + series.metric_name +
-        "?from=" + FROM + "&to=" + TO + "&points=200";
+        "?from=" + FROM + "&to=" + TO + "&points=" + POINTS;
 }
 
 function toValues(data, name) {
@@ -134,7 +141,10 @@ function updateChart() {
             .append($('<td>').append(s.entity_label),
                     $('<td>').append(s.check_label),
                     $('<span>').attr('class', 'label')
-                                .attr('style', 'background-color:' + s.color).append(s.metric_name)
+                                .attr('style', 'background-color:' + s.color).append(s.metric_name + ' ')
+                                    .append($('<a>').attr('href', '#')
+                                        .append($('<span>').attr('class', 'icon-remove'))
+                                    )
             )
         );
     }
