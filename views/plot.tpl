@@ -31,9 +31,6 @@
 
 <div class="row">
     <div class="span3">
-        <!--<ul class="nav nav-list" id="entitylist">
-            <li class="nav-header">Entities</li>
-        </ul>-->
         <h2 class="nav-header">Entities</h2>
         <div class="accordion" id="entitylist">
         </div>
@@ -119,9 +116,9 @@ function toValues(data, name) {
 }
 
 function getDatumList(dict) {
-    list = [];
+    var list = [];
     for( n in SERIES ){
-        s = SERIES[n];
+        var s = SERIES[n];
         list.push( {values: s.values,
                     color: s.color,
                     key: s.name});
@@ -134,21 +131,22 @@ function updateChart() {
         .datum(getDatumList())
         .call(chart.update);
 
-    var target = $("#metrictable");
+    var $target = $("#metrictable");
 
-    target.find("tr:gt(0)").remove();
+    $target.find("tr:gt(0)").remove();
 
-    for(n in SERIES) {
-        s = SERIES[n];
-        target.append($('<tr>')
+    for(var n in SERIES) {
+        var s = SERIES[n];
+
+        $target.append($('<tr>')
             .append($('<td>').append(s.entity_label),
                     $('<td>').append(s.check_label),
                     $('<span>').attr('class', 'label')
                                 .attr('style', 'background-color:' + s.color).append(s.metric_name + ' ')
                                     .append(
-                                        $('<a>').attr('href', '#')
+                                        $('<a>').attr('href', '#').attr('onclick','removeSeries(SERIES["' + n + '"], true)' )
                                         .append(
-                                            $('<span>').attr('class', 'icon-remove').click(function() {removeSeries(s, true)})
+                                            $('<span>').attr('class', 'icon-remove')
                                         )
                                     )
             )

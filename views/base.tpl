@@ -51,6 +51,8 @@
     <script src="/static/js/jquery.ba-resize.js"></script>
 %end
 
+  <script src="/static/js/underscore-min.js"></script>
+
   </head>
 
   <body>
