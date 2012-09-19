@@ -40,7 +40,7 @@ def mock_data(session, entity_id=None, check_id=None, metric_name=None):
     elif metric_name == 'rand':
         func = lambda t: random.random()
     elif metric_name == 'randsin':
-        func = lambda t: math.sin(float(t)/60/30) + random.random()/5 - 1
+        func = lambda t: math.cos(float(t)/60/30) + random.normalvariate(0, 1)/5 - 1
     else:
         func = lambda t: 0
 
