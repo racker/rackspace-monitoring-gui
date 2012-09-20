@@ -69,6 +69,10 @@ def mock_data(session, entity_id=None, check_id=None, metric_name=None):
 
     bottle.response.content_type = "application/json"
 
+    #Fake delay for UI interaction
+    #import time
+    #time.sleep(2)
+
     return json.dumps(data)
 
 #@bottle.get('/entities/:entity_id/checks/:check_id/metrics/:metric_name')
@@ -113,6 +117,10 @@ def get_check(session, entity_id=None, check_id=None):
 
 @bottle.get('/entities/:entity_id/checks/:check_id/metrics')
 def get_metrics(session, entity_id=None, check_id=None):
+    #Fake delay for UI interaction
+    import time
+    time.sleep(2)
+
     return json.dumps( [{'metricName': 'sin'}, {'metricName': 'cos'}, {'metricName': 'a'}, {'metricName': 'randsin'} ] )
 
 @bottle.get('/entities/:entity_id/checks/:check_id/metrics/metric_name')

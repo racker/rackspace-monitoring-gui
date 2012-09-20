@@ -2,9 +2,34 @@
     <style>
 
     #chart {
-            height: 400px;
+            height: 450px;
     }
 
+    #daterangeselect {
+        float:right;
+
+    }
+
+    .dataTables_length {
+        display:none ;
+    }
+
+    #entitytable_wrapper input {
+        float: right;
+        width: auto;
+    }
+
+    #entitytable_wrapper btn-group {
+        text-align: right;
+    }
+
+    #entitytable_wrapper .paginate_disabled_previous {
+        float: left;
+    }
+
+    #entitytable_wrapper .paginate_disabled_next {
+        float: right;
+    }
 
     </style>
 %end
@@ -31,13 +56,27 @@
 
 <div class="row">
     <div class="span3">
-        <h2 class="nav-header">Entities</h2>
-        <div class="accordion" id="entitylist">
+        <div class="tabbable" id="navtabs"> <!-- Only required for left/right tabs -->
+              <ul class="nav nav-tabs">
+                    <li class="active"><a href="#entitytab" data-toggle="tab">Entities</a></li>
+                    <li><a href="#checktab" data-toggle="tab">Checks</a></li>
+              </ul>
+              <div class="tab-content">
+                    <div class="tab-pane active" id="entitytab">
+                        <table class="table table-bordered" id="entitytable"></table>
+                    </div>
+                    <div class="tab-pane" id="checktab">
+                        <p id="checkheader"></p>
+                        <img id="checkloading" src="/static/img/loading_spinner.gif" />
+                        <div class="accordion" id="checklist"></div>
+                    </div>
+              </div>
         </div>
-
     </div>
+
+
     <div class="span9" id="chart">
-        <div class="btn-group" id="daterangeselect" class="pull-right">
+        <div class="btn-group" id="daterangeselect">
             <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">Time Scale<span class="caret"></span></a>
             <ul class="dropdown-menu"></ul>
         </div>
@@ -227,7 +266,7 @@ function setDateRange(range, update) {
 }
 
 function metricClick(event) {
-    var $target = $(event.target);
+    var $target = $(event.currentTarget);
 
     var entity_id = $target.attr('data-entity-id');
     var entity_label = ENTITIES[entity_id]['label'];
@@ -247,33 +286,32 @@ function metricClick(event) {
 
 function metricAccord(entity_id, check_id, metric_name) {
     $e = $('<p>').append(
-        $('<a>').attr('href', '#').attr('data-entity-id', entity_id).attr('data-check-id', check_id).attr('data-metric-name', metric_name).click(metricClick).append(
-            metric_name
-        )
+        $('<a>').attr('href', '#').attr('data-entity-id', entity_id).attr('data-check-id', check_id).attr('data-metric-name', metric_name).click(metricClick).append("Metric: <strong>" + metric_name + "</strong> ")
     );
     return $e;
 }
 
 
 function checkClick(event) {
-    var $target = $(event.target);
+    var $target = $(event.currentTarget);
+    var $child = $($target.attr("data-child"))
     var entity_id = $target.attr('data-entity-id');
     var check_id = $target.attr('data-check-id');
 
-    $($target.attr("data-child")).children().remove()
+    if ( $child.children().length > 0) {
+        $child.empty();
+    } else {
+        $target.find("img").show();
 
-    jQuery.getJSON("/entities/" + entity_id + "/checks/" + check_id + "/metrics?json=true", function(data) {
-        $.each(data, function(index, metric){
-            $($target.attr("data-child")).append(metricAccord(entity_id, check_id, metric['metricName']));
-        });
-    })
-}
 
-function entityDOM(entity_id, entity_name) {
-    return $('<li>').append(
-                $('<a>').attr('id', entity_id)
-                    .append(entity_name),
-                             $('<ul>').addClass('nav nav-list'));
+        jQuery.getJSON("/entities/" + entity_id + "/checks/" + check_id + "/metrics?json=true", function(data) {
+            $.each(data, function(index, metric){
+                $child.append(metricAccord(entity_id, check_id, metric['metricName']));
+            });
+
+            $target.find("img").hide();
+        })
+    }
 }
 
 
@@ -282,14 +320,15 @@ function checkAccord(entity_id, check_id, check_name) {
             .append(
                 $('<div>').addClass("accordion-heading").append(
                     $('<a>').addClass("accordion-toggle").attr("data-toggle", "collapse").attr("data-parent", entity_id + "Checks").attr("data-child", "#" + check_id + "Metrics").attr("href", "#" + check_id + "Body").attr("data-entity-id", entity_id).attr("data-check-id", check_id).click(checkClick)
-                        .append(check_name)
+                        .append(
+                            "Check: <strong>" + check_name + "</strong> ",
+                            $('<img>').addClass('checkloading').attr("src", '/static/img/loading_spinner.gif').hide()
+                        )
                 ),
                 $('<div>').attr("id", check_id + "Body").addClass("accordion-body collapse")
                     .append($('<div>').addClass("accordion-inner")
                         .append(
-                            $('<h4>').addClass("nav-header").append("Metrics"),
                             $('<div>').addClass("accordian").attr("id", check_id + "Metrics")
-
                         )
                     )
             );
@@ -297,46 +336,59 @@ function checkAccord(entity_id, check_id, check_name) {
 }
 
 function entityClick(event) {
-    var $target = $(event.target);
+    var $target = $(event.currentTarget);
     var entity_id = $target.attr('data-entity-id');
 
-    $($target.attr("data-child")).children().remove()
+    $("#checklist").empty();
+    $("#checkloading").show();
+
 
     jQuery.getJSON("/entities/" + entity_id + "?json=true", function(data) {
-        $.each(data, function(index, check){
-            $($target.attr("data-child")).append(checkAccord(entity_id, check['id'], check['label']));
-            CHECKS[check['id']] = check;
-        });
+        if(data.length > 0) {
+            $.each(data, function(index, check){
+                $("#checklist").append(checkAccord(entity_id, check['id'], check['label']));
+                CHECKS[check['id']] = check;
+            });
+        } else {
+            $("#checklist").append($('<p>').append("No checks found!"))
+        }
+        $("#checkloading").hide();
     })
-}
 
-
-function entityAccord(entity_id, entity_name) {
-    $e = $('<div>').addClass('accordion-group')
-            .append(
-                $('<div>').addClass("accordion-heading").append(
-                    $('<a>').addClass("accordion-toggle").attr("data-toggle", "collapse").attr("data-parent", "#accordion1").attr("data-child", "#" + entity_id + "Checks").attr("href", "#" + entity_id + "Body").attr("data-entity-id", entity_id).click(entityClick)
-                        .append(entity_name)
-                ),
-                $('<div>').attr("id", entity_id + "Body").addClass("accordion-body collapse")
-                    .append($('<div>').addClass("accordion-inner")
-                        .append(
-                            $('<h3>').addClass("nav-header").append("Checks"),
-                            $('<div>').addClass("accordian").attr("id", entity_id + "Checks")
-
-                        )
-                    )
-            );
-    return $e;
+    $('#checkheader').empty().append("Checks for <strong>" + ENTITIES[entity_id]['label'] + "</strong>:");
+    $('#navtabs a[href="#checktab"]').tab('show');
 }
 
 // Load all entities
 jQuery.getJSON("/entities?json=true", function(data) {
+
     $.each(data, function(index, entity){
-        $("#entitylist").append(entityAccord(entity['id'], entity['label']));
+        /*$("#entitylist").append(entityAccord(entity['id'], entity['label']));*/
         ENTITIES[entity['id']] = entity;
     });
+
+    $('#entitytable').dataTable( {
+        "aaData": _.map(data, function(e) {return [e['label'], e['id']]}),
+        "aoColumns": [
+            { "sTitle": "Entity Name"},
+        ],
+        "fnRowCallback": function (nRow, aData, iDisplayIndex, iDisplayIndexFull) {
+            $('td:eq(0)', nRow).empty().append(
+                $('<a>').attr("href", "#").attr("data-entity-id", aData[1]).click(entityClick).append(
+                    "Entity: <strong>" + aData[0] + "</strong>"
+                )
+            );
+
+        }
+
+    });
+
+    $('#entitytable_paginate').addClass("pager");
+    $('#entitytable_previous').addClass("previous");
+    $('#entitytable_previous').attr("stlyle", "left: 0");
+    $('#entitytable_next').attr("stlyle", "float:right;");
 });
+
 
 
 var chart = nv.models.lineChart();
