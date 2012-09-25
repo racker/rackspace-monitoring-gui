@@ -21,7 +21,8 @@ bottle.install(require_session)
 def index(sesssion):
     return bottle.template('index', debug=settings.DEBUG, session=session)
 
-@bottle.get('/mock/entities/:entity_id/checks/:check_id/metrics/:metric_name', skip=require_session)
+@bottle.get('/entities/:entity_id/checks/:check_id/metrics/:metric_name', skip=require_session)
+@bottle.get('/proxy/entities/:entity_id/checks/:check_id/metrics/:metric_name', skip=require_session)
 def mock_data(session, entity_id=None, check_id=None, metric_name=None):
     def _to_dict(timestamp, data):
         return {'timestamp': timestamp, 'numPoints': 10, 'average': {'type': 'l', 'data': data}}
@@ -115,11 +116,12 @@ def get_checks(session, entity_id=None):
 def get_check(session, entity_id=None, check_id=None):
     return ""
 
+@bottle.get('/proxy/entities/:entity_id/checks/:check_id/metrics')
 @bottle.get('/entities/:entity_id/checks/:check_id/metrics')
 def get_metrics(session, entity_id=None, check_id=None):
     #Fake delay for UI interaction
     import time
-    time.sleep(2)
+    #time.sleep(2)
 
     return json.dumps( [{'metricName': 'sin'}, {'metricName': 'cos'}, {'metricName': 'a'}, {'metricName': 'randsin'} ] )
 
@@ -141,7 +143,7 @@ def login(session):
     username = bottle.request.forms.get('username')
     api_key = bottle.request.forms.get('api_key')
 
-    print username, api_key
+    #print username, api_key
 
     def _auth_body(username, api_key):
         return json.dumps({"credentials": {"username":username, "key":api_key }})
@@ -161,7 +163,7 @@ def login(session):
         session.save()
 
         bottle.response.status = 303
-        bottle.response.set_header('Location', '/entities')
+        bottle.response.set_header('Location', '/plot')
         return bottle.response
     else:
         errors.append('Invalid username or password.')
@@ -178,6 +180,45 @@ def logout(session):
 def staticsrv(path):
     return bottle.static_file(path, root=STATIC_DIR)
 
+@bottle.get("/proxy/<path:path>")
+def proxy(session, path=None):
+    r = _auth_request(session, requests.get, "/" + path, data=bottle.request.body.read())
+
+    return json.dumps(r.json) or ""
+
+@bottle.post("/proxy/<path:path>")
+def proxy(session, path=None):
+    r = _auth_request(session, requests.post, "/" + path, data=bottle.request.body.read())
+
+    try:
+        body = r.data
+    except AttributeError:
+        body = ""
+
+    return bottle.Response(body=body, status=r.status_code, **r.headers)
+
+
+@bottle.delete("/proxy/<path:path>")
+def proxy(session, path=None):
+    r = _auth_request(session, requests.delete, "/" + path, data=bottle.request.body.read())
+
+    try:
+        body = r.data
+    except AttributeError:
+        body = ""
+
+    return bottle.Response(body=body, status=r.status_code, **r.headers)
+
+@bottle.put("/proxy/<path:path>")
+def proxy(session, path=None):
+    r = _auth_request(session, requests.put, "/" + path, data=bottle.request.body.read())
+
+    try:
+        body = r.data
+    except AttributeError:
+        body = ""
+
+    return bottle.Response(body=body, status=r.status_code, **r.headers)
 
 from lib.bottle import PasteServer
 

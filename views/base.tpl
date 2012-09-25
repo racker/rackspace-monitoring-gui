@@ -46,11 +46,13 @@
     <script src="/static/js/bootstrap.js"></script>
     <script src="/static/js/jquery.ba-resize.js"></script>
     <script src="/static/js/jquery.dataTables.js"></script>
+    <script src="/static/js/jquery.ba-bbq.js"></script>
 %else:
     <script src="/static/js/jquery.min.js"></script>
     <script src="/static/js/bootstrap.min.js"></script>
     <script src="/static/js/jquery.ba-resize.js"></script>
     <script src="/static/js/jquery.dataTables.min.js"></script>
+    <script src="/static/js/jquery.ba-bbq.min.js"></script>
 %end
 
   <script src="/static/js/underscore-min.js"></script>

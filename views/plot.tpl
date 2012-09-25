@@ -23,11 +23,21 @@
         text-align: right;
     }
 
-    #entitytable_wrapper .paginate_disabled_previous {
+    #entitytable_wrapper .paginate_disabled_previous,
+    #entitytable_wrapper .paginate_enabled_previous {
         float: left;
     }
 
-    #entitytable_wrapper .paginate_disabled_next {
+    #entitytable_wrapper .paginate_enabled_previous:before {
+        content: "← ";
+    }
+
+    #entitytable_wrapper .paginate_enabled_next:after {
+        content: " →";
+    }
+
+    #entitytable_wrapper .paginate_disabled_next,
+    #entitytable_wrapper .paginate_enabled_next {
         float: right;
     }
 
@@ -140,7 +150,7 @@ function fromKey(str) {
 
 function getMetricUrl(series) {
 
-    return "/mock/entities/" + series.entity_id +
+    return "/proxy/entities/" + series.entity_id +
         "/checks/" + series.check_id +
         "/metrics/" + series.metric_name +
         "?from=" + FROM + "&to=" + TO + "&points=" + POINTS;
@@ -149,7 +159,7 @@ function getMetricUrl(series) {
 function toValues(data, name) {
     var values = [];
     for(n in data) {
-        values.push({x: data[n]['timestamp'], y: data[n]['average']['data']});
+        values.push({x: new Date(data[n]['timestamp'] * 1000), y: data[n]['average']['data']} );
     }
     return values;
 }
@@ -245,10 +255,10 @@ function reloadData(update) {
 
 HOUR = 60*60;
 DATERANGES = {
-    "hour": {text: "Last hour", offset: HOUR},
-    "6hour": {text: "Last 3 hours", offset: 3*HOUR},
-    "day": {text: "Last day", offset: 24*HOUR},
-    "week": {text: "Last week", offset: 7*24*HOUR},
+    "hour": {text: "Last hour", offset: HOUR, dateformat: "%l:%M"},
+    "6hour": {text: "Last 3 hours", offset: 3*HOUR, dateformat: "%l:%M"},
+    "day": {text: "Last day", offset: 24*HOUR, dateformat: "%l:%M"},
+    "week": {text: "Last week", offset: 7*24*HOUR, },
     "month": {text: "Last month", offset: 30*24*HOUR},
     "6month": {text: "Last 6 months", offset: 182*24*HOUR},
     "year": {text: "Last year", offset: 365*24*HOUR}
@@ -291,6 +301,9 @@ function metricAccord(entity_id, check_id, metric_name) {
     return $e;
 }
 
+function fetchChecks() {
+
+}
 
 function checkClick(event) {
     var $target = $(event.currentTarget);
@@ -359,6 +372,28 @@ function entityClick(event) {
     $('#navtabs a[href="#checktab"]').tab('show');
 }
 
+function initSeries() {
+    var params = $.deparam(window.location.search.substring(1));
+
+    _.each(params.series.split(';'), function(s) {
+        s = s.split(',');
+        jQuery.getJSON("/entities/" + s[0] + "?json=true", function(data) {
+        _.each(data, function(check){
+            CHECKS[check['id']] = check;
+            series = new Series(s[0], s[1], s[2]);
+            series.entity_name = ENTITIES[s[0]].label;
+            series.check_name = CHECKS[s[1]].label;
+            addSeries(series , true);
+        })
+    })
+
+
+    });
+}
+
+//initSeries();
+
+
 // Load all entities
 jQuery.getJSON("/entities?json=true", function(data) {
 
@@ -393,12 +428,13 @@ jQuery.getJSON("/entities?json=true", function(data) {
 
 var chart = nv.models.lineChart();
 
+chart.xScale(d3.time.scale());
+
 chart.xAxis
-    .ticks(2)
-    .scale(d3.time.scale)
     .showMaxMin(false)
     .axisLabel('Date')
-    .tickFormat(function(d) {return d3.time.format('%X')(new Date(d*1000)) });
+    .ticks(d3.time.scale().ticks(5))
+    .tickFormat(d3.time.scale().tickFormat(5));
 
 chart.yAxis
     .axisLabel('')
