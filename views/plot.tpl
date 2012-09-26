@@ -2,7 +2,7 @@
     <style>
 
     #chart {
-            height: 450px;
+            height: 350px;
     }
 
     #daterangeselect {
@@ -65,7 +65,7 @@
 %rebase base title='Plot', debug=debug, session=session, scripts=scripts, links=links, styles=styles
 
 <div class="row">
-    <div class="span3">
+    <div class="span4">
         <div class="tabbable" id="navtabs"> <!-- Only required for left/right tabs -->
               <ul class="nav nav-tabs">
                     <li class="active"><a href="#entitytab" data-toggle="tab">Entities</a></li>
@@ -85,7 +85,7 @@
     </div>
 
 
-    <div class="span9" id="chart">
+    <div class="span8" id="chart">
         <div class="btn-group" id="daterangeselect">
             <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">Time Scale<span class="caret"></span></a>
             <ul class="dropdown-menu"></ul>
@@ -132,11 +132,9 @@ function nextColor() {
 
 function Series(entity_id, check_id, metric_name) {
     this.values = [];
-    this.color = undefined;
     this.entity_id = entity_id;
     this.check_id = check_id;
     this.metric_name = metric_name;
-    this.name = "foo";
 }
 
 function toKey(series) {
@@ -356,7 +354,7 @@ function entityClick(event) {
     $("#checkloading").show();
 
 
-    jQuery.getJSON("/entities/" + entity_id + "?json=true", function(data) {
+    jQuery.getJSON("/entities/" + entity_id + "/checks", function(data) {
         if(data.length > 0) {
             $.each(data, function(index, check){
                 $("#checklist").append(checkAccord(entity_id, check['id'], check['label']));
@@ -391,9 +389,6 @@ function initSeries() {
     });
 }
 
-//initSeries();
-
-
 // Load all entities
 jQuery.getJSON("/entities?json=true", function(data) {
 
@@ -423,8 +418,6 @@ jQuery.getJSON("/entities?json=true", function(data) {
     $('#entitytable_previous').attr("stlyle", "left: 0");
     $('#entitytable_next').attr("stlyle", "float:right;");
 });
-
-
 
 var chart = nv.models.lineChart();
 

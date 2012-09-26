@@ -89,13 +89,21 @@ def _auth_request(session, request_func, path, *args, **kwargs):
 
 @bottle.get('/entities')
 def get_entities(session):
+    entities = [];
+
     r = _auth_request(session, requests.get, '/entities')
+    entities.extend(r.json['values'])
+    next_marker = r.json['metadata'].get('next_marker', None)
 
-    if 'json' in bottle.request.query and bottle.request.query['json'] == 'true':
-        return json.dumps(r.json['values'])
+    while(next_marker):
+        print next_marker
+        r = _auth_request(session, requests.get, '/entities?marker=' + next_marker)
+        entities.extend(r.json['values'])
+        next_marker = r.json['metadata'].get('next_marker', None)
 
-    errors = []
-    return bottle.template('entities', debug=settings.DEBUG, errors=errors, session=session, entities=r.json['values'])
+    return json.dumps(entities)
+
+#    return bottle.template('entities', debug=settings.DEBUG, errors=errors, session=session, entities=r.json['values'])
 
 @bottle.get('/entities/:entity_id')
 def get_entity(session, entity_id=None):
@@ -110,7 +118,18 @@ def get_entity(session, entity_id=None):
 
 @bottle.get('/entities/:entity_id/checks')
 def get_checks(session, entity_id=None):
-    return ""
+    checks = [];
+
+    r = _auth_request(session, requests.get, '/entities/' + entity_id + '/checks')
+    checks.extend(r.json['values'])
+    next_marker = r.json['metadata'].get('next_marker', None)
+
+    while(next_marker):
+        r = _auth_request(session, requests.get, '/entities/' + entity_id + '/checks?marker=' + next_marker)
+        checks.extend(r.json['values'])
+        next_marker = r.json['metadata'].get('next_marker', None)
+
+    return json.dumps(checks)
 
 @bottle.get('/entities/:entity_id/checks/:check_id')
 def get_check(session, entity_id=None, check_id=None):
