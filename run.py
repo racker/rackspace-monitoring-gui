@@ -201,7 +201,8 @@ def staticsrv(path):
 
 @bottle.get("/proxy/<path:path>")
 def proxy(session, path=None):
-    r = _auth_request(session, requests.get, "/" + path, data=bottle.request.body.read())
+
+    r = _auth_request(session, requests.get, "/" + path, data=bottle.request.body.read(), params=bottle.request.params)
 
     return json.dumps(r.json) or ""
 

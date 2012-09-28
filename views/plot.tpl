@@ -45,8 +45,15 @@
 %end
 
 %def scripts():
+
+    <script src="/static/js/jquery.js"></script>
+    <script src="/static/js/underscore.js"></script>
+    <script src="/static/js/backbone.js"></script>
+    <script src="/static/js/maasmodels.js"></script>
     <script src="/static/nvd3/lib/d3.v2.js"></script>
     <script src="/static/nvd3/nv.d3.js"></script>
+
+
 %end
 
 %def links():
@@ -417,6 +424,8 @@ jQuery.getJSON("/entities?json=true", function(data) {
     $('#entitytable_previous').addClass("previous");
     $('#entitytable_previous').attr("stlyle", "left: 0");
     $('#entitytable_next').attr("stlyle", "float:right;");
+
+    initSeries();
 });
 
 var chart = nv.models.lineChart();
@@ -454,6 +463,7 @@ for(var r in DATERANGES) {
 
 setDateRange('day');
 $("#chart").resize(updateChart);
+
 
 
 </script>
