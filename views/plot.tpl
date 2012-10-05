@@ -164,7 +164,7 @@ function getMetricUrl(series) {
 function toValues(data, name) {
     var values = [];
     for(n in data) {
-        values.push({x: new Date(data[n]['timestamp'] * 1000), y: data[n]['average']['data']} );
+        values.push({x: new Date(data[n]['timestamp']), y: data[n]['average']} );
     }
     return values;
 }
@@ -324,7 +324,7 @@ function checkClick(event) {
 
         jQuery.getJSON("/entities/" + entity_id + "/checks/" + check_id + "/metrics?json=true", function(data) {
             $.each(data, function(index, metric){
-                $child.append(metricAccord(entity_id, check_id, metric['metricName']));
+                $child.append(metricAccord(entity_id, check_id, metric['name']));
             });
 
             $target.find("img").hide();
@@ -440,7 +440,7 @@ chart.xAxis
 
 chart.yAxis
     .axisLabel('')
-    .tickFormat(d3.format('.02f'));
+    .tickFormat(d3.format(',.6f'));
 
 
 nv.addGraph(function() {

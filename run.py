@@ -1,11 +1,14 @@
 #!/usr/bin/env python
 
-import os, math, requests, random
+import os
+import requests
 from lib import bottle
 from lib.plugins import SessionPlugin, RequireSession
 
-try: import simplejson as json
-except ImportError: import json
+try:
+    import simplejson as json
+except ImportError:
+    import json
 
 import settings
 
@@ -17,64 +20,48 @@ session = SessionPlugin(cookie_name=settings.COOKIE_NAME, cookie_secret=settings
 bottle.install(session)
 bottle.install(require_session)
 
+
 @bottle.route('/')
 def index(sesssion):
     return bottle.template('index', debug=settings.DEBUG, session=session)
 
+
 @bottle.get('/entities/:entity_id/checks/:check_id/metrics/:metric_name', skip=require_session)
 @bottle.get('/proxy/entities/:entity_id/checks/:check_id/metrics/:metric_name', skip=require_session)
-def mock_data(session, entity_id=None, check_id=None, metric_name=None):
-    def _to_dict(timestamp, data):
-        return {'timestamp': timestamp, 'numPoints': 10, 'average': {'type': 'l', 'data': data}}
-
-    from_time = int(bottle.request.query['from']) if 'from' in bottle.request.query else 0
-    to_time = int(bottle.request.query['to']) if 'to' in bottle.request.query else 0
-
-    if metric_name == 'sin':
-        func = lambda t: math.sin(float(t)/60/60)
-    elif metric_name == 'cos':
-        func = lambda t: math.cos(float(t)/60/60)
-    elif metric_name == 'a':
-        func = lambda t: math.sin(float(t)/60/30)
-    elif metric_name == 'b':
-        func = lambda t: math.cos(float(t)/60/30) + 1
-    elif metric_name == 'rand':
-        func = lambda t: random.random()
-    elif metric_name == 'randsin':
-        func = lambda t: math.cos(float(t)/60/30) + random.normalvariate(0, 1)/5 - 1
-    else:
-        func = lambda t: 0
+def rollups_data(session, entity_id=None, check_id=None, metric_name=None):
+    from_time = 1000 * long(bottle.request.query['from']) if 'from' in bottle.request.query else 0
+    to_time = 1000 * long(bottle.request.query['to']) if 'to' in bottle.request.query else 0
+    get_by_points = True
+    points = 0
+    resolution = ''
+    data = []
 
     if 'resolution' in bottle.request.query:
+        get_by_points = False
         resolution = bottle.request.query['resolution']
-
-        if resolution == 'MIN5':
-            iter = range(from_time, to_time, 60*5)
-        if resolution == 'MIN20':
-            iter = range(from_time, to_time, 60*20)
-        if resolution == 'MIN60':
-            iter = range(from_time, to_time, 60*60)
-        if resolution == 'MIN240':
-            iter = range(from_time, to_time, 60*240)
-        if resolution == 'MIN1440':
-            iter = range(from_time, to_time, 60*1440)
-
-        data = [_to_dict(t, func(t)) for t in iter]
-
     elif 'points' in bottle.request.query:
-        points = int(bottle.request.query['points'])
-        iter = range(from_time, to_time, (to_time-from_time)/points)
-        data = [_to_dict(t, func(t)) for t in iter]
-    else:
-        data = []
+        points = long(bottle.request.query['points'])
 
     bottle.response.content_type = "application/json"
+    base_url = '/entities/' + entity_id + '/checks/' + check_id + '/metrics/' + metric_name
+    url = ''
+    if get_by_points:
+        url = base_url + '?from=' + str(from_time) + '&to=' + str(to_time) + '&points=' + str(points)
+    else:
+        url = base_url + '?from=' + str(from_time) + '&to=' + str(to_time) + '&resolution=' + str(resolution)
 
-    #Fake delay for UI interaction
-    #import time
-    #time.sleep(2)
+    r = _auth_request(session, requests.get, url)
+    data.extend(r.json['values'])
+    next_marker = r.json['metadata'].get('next_marker', None)
 
+    while(next_marker):
+        r = _auth_request(session, requests.get, url)
+        data.extend(r.json['values'])
+        next_marker = r.json['metadata'].get('next_marker', None)
+
+    print json.dumps(data)
     return json.dumps(data)
+
 
 #@bottle.get('/entities/:entity_id/checks/:check_id/metrics/:metric_name')
 @bottle.get('/plot')
@@ -82,10 +69,14 @@ def plot_metrics(session, entity_id=None, check_id=None, metric_name=None):
     errors = []
     return bottle.template('plot', debug=settings.DEBUG, errors=errors, session=session)
 
+
 def _auth_request(session, request_func, path, *args, **kwargs):
     headers = kwargs.pop('headers', dict())
     headers['X-Auth-Token'] = session['auth_token']
+    print path
+    print session['monitoring_url']
     return request_func(session['monitoring_url'] + path, *args, headers=headers, **kwargs)
+
 
 @bottle.get('/entities')
 def get_entities(session):
@@ -105,6 +96,7 @@ def get_entities(session):
 
 #    return bottle.template('entities', debug=settings.DEBUG, errors=errors, session=session, entities=r.json['values'])
 
+
 @bottle.get('/entities/:entity_id')
 def get_entity(session, entity_id=None):
     r_entity = _auth_request(session, requests.get, '/entities/' + entity_id)
@@ -116,9 +108,10 @@ def get_entity(session, entity_id=None):
     errors = []
     return bottle.template('entity', debug=settings.DEBUG, errors=errors, session=session, entity=r_entity.json, checks=r_checks.json['values'])
 
+
 @bottle.get('/entities/:entity_id/checks')
 def get_checks(session, entity_id=None):
-    checks = [];
+    checks = []
 
     r = _auth_request(session, requests.get, '/entities/' + entity_id + '/checks')
     checks.extend(r.json['values'])
@@ -131,22 +124,33 @@ def get_checks(session, entity_id=None):
 
     return json.dumps(checks)
 
+
 @bottle.get('/entities/:entity_id/checks/:check_id')
 def get_check(session, entity_id=None, check_id=None):
     return ""
 
+
 @bottle.get('/proxy/entities/:entity_id/checks/:check_id/metrics')
 @bottle.get('/entities/:entity_id/checks/:check_id/metrics')
 def get_metrics(session, entity_id=None, check_id=None):
-    #Fake delay for UI interaction
-    import time
-    #time.sleep(2)
+    metrics = []
+    url = '/entities/' + entity_id + '/checks/' + check_id + '/metrics'
+    r = _auth_request(session, requests.get, url)
+    metrics.extend(r.json['values'])
+    next_marker = r.json['metadata'].get('next_marker', None)
 
-    return json.dumps( [{'metricName': 'sin'}, {'metricName': 'cos'}, {'metricName': 'a'}, {'metricName': 'randsin'} ] )
+    while(next_marker):
+        r = _auth_request(session, requests.get, url + '?marker=' + next_marker)
+        metrics.extend(r.json['values'])
+        next_marker = r.json['metadata'].get('next_marker', None)
+
+    return json.dumps(metrics)
+
 
 @bottle.get('/entities/:entity_id/checks/:check_id/metrics/metric_name')
 def get_metric(session, entity_id=None, check_id=None):
     return ""
+
 
 @bottle.get('/login', skip=require_session)
 def login(session):
@@ -156,6 +160,7 @@ def login(session):
         return bottle.response
     errors = []
     return bottle.template('login', debug=settings.DEBUG, errors=errors, session=session)
+
 
 @bottle.post('/login', skip=require_session)
 def login(session):
@@ -188,6 +193,7 @@ def login(session):
         errors.append('Invalid username or password.')
     return bottle.template('login', debug=settings.DEBUG, errors=errors, session=session)
 
+
 @bottle.route('/logout', skip=require_session)
 def logout(session):
     session.logout()
@@ -195,9 +201,11 @@ def logout(session):
     bottle.response.set_header('Location', '/')
     return bottle.response
 
+
 @bottle.route('/static/<path:path>', skip=True)
 def staticsrv(path):
     return bottle.static_file(path, root=STATIC_DIR)
+
 
 @bottle.get("/proxy/<path:path>")
 def proxy(session, path=None):
@@ -205,6 +213,7 @@ def proxy(session, path=None):
     r = _auth_request(session, requests.get, "/" + path, data=bottle.request.body.read(), params=bottle.request.params)
 
     return json.dumps(r.json) or ""
+
 
 @bottle.post("/proxy/<path:path>")
 def proxy(session, path=None):
@@ -228,6 +237,7 @@ def proxy(session, path=None):
         body = ""
 
     return bottle.Response(body=body, status=r.status_code, **r.headers)
+
 
 @bottle.put("/proxy/<path:path>")
 def proxy(session, path=None):
