@@ -1,0 +1,12 @@
+{
+  "name": "rackspace-monitoring-gui",
+  "description": "webapp for rackspace monitoring",
+  "version": "0.0.1",
+  "private": true,
+  "dependencies": {
+    "express": "3.x",
+    "jade": "0.27.x",
+    "connect": "2.5.x",
+    "connect-mongo": "0.2.x"
+  }
+}

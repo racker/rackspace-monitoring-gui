@@ -1,0 +1,21 @@
+extends layout
+
+block content
+  h1= session.username
+  div.row-fluid
+    div.span6.offset3
+      for error in errors
+        div.alert.alert-error= error
+      form.form-horizontal(action="/login", method="POST")
+        div.control-group
+          div.controls
+            input(type="text", name="username", id="username", placeholder="username")
+        div.control-group
+          div.controls
+            input(type="password", name="password", id="password", placeholder="password")
+        div.control-group
+          div.controls
+            label.checkbox
+              | Remember me
+              input(type="checkbox", id="remember_me", name="remember_me", checked="checked")= "Remember me"
+            button.btn(type="submit")= "Sign in"
