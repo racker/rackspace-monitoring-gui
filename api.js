@@ -73,4 +73,19 @@ var authenticate = function(opts, callback) {
     });
 };
 
-module.exports = {authenticate: authenticate};
+var proxy_request = function(req, res) {
+    var headers = {'X-Auth-Token': req.session.authToken,
+               'Accept': 'application/json',
+               'Content-Type': 'application/json'};
+
+    request(req.session.url + req.params[0], req.route.method.toUpperCase(), JSON.stringify(req.body), headers, function(err, result) {
+        if (err) {
+            console.log('Request Error: ' + err);
+            res.send(500, 'Request Error');
+        } else {
+            res.set(result.headers).send(result.code, result.body);
+        }
+    });
+}
+
+module.exports = {authenticate: authenticate, proxy_request: proxy_request};

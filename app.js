@@ -41,7 +41,7 @@ app.configure(function(){
     next();
   });
 
-  app.use(app.router);
+  //app.use(app.router);
 
   // views
   app.set("views", __dirname + "/views");
@@ -112,5 +112,7 @@ app.get('/logout', function(req, res) {
   req.session.destroy();
   res.redirect('/login');
 });
+
+app.all(/^\/proxy(.*)/, api.proxy_request);
 
 app.listen(3000);

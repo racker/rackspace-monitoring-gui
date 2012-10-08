@@ -3,11 +3,11 @@ var http = require('http');
 var parse = require('url').parse;
 
 var request = function(url, method, body, headers, callback) {
-
     var parsed, key, req, response;
 
     parsed = parse(url);
     parsed.method = method;
+    parsed.headers = headers
 
     if (body) {
         parsed.headers = {'content-length': body.length};
@@ -37,7 +37,8 @@ var request = function(url, method, body, headers, callback) {
 
       res.on('end', function () {
         callback(null, {'code': this.statusCode,
-                        'body': response});
+                        'body': response,
+                        'headers': this.headers});
       });
     });
 
