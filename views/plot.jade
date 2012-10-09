@@ -1,0 +1,43 @@
+extends layout
+block header
+
+    link(rel='stylesheet', href='/nvd3/src/nv.d3.css')
+    link(rel='stylesheet', href='/css/plot.css')
+
+    script(type='text/javascript', src='/js/jquery.dataTables.js')
+    script(type='text/javascript', src='/js/underscore.js')
+    script(type='text/javascript', src='/js/d3.v2.js')
+    script(type='text/javascript', src='/nvd3/nv.d3.js')
+
+
+
+block content
+    .row
+        .span4
+            #navtabs.tabbable
+              ul.nav.nav-tabs
+                li.active
+                  a(href='#entitytab', data-toggle='tab') Entities
+                li
+                  a(href='#checktab', data-toggle='tab') Checks
+              .tab-content
+                #entitytab.tab-pane.active
+                  table#entitytable.table.table-bordered
+                #checktab.tab-pane
+                  p#checkheader
+                  img#checkloading(src='/img/loading_spinner.gif')
+                  #checklist.accordion
+        #chart.span8
+            #daterangeselect.btn-group
+              a.btn.dropdown-toggle(data-toggle='dropdown', href='#')
+                | Time Scale
+                span.caret
+              ul.dropdown-menu
+            svg
+            table#metrictable.table
+              tr
+                th Entity Name
+                th Check Name
+                th Metric Name
+
+    script(type='text/javascript', src='/js/plot.js')
