@@ -56,6 +56,10 @@ app.get('/', function(req, res){
     res.render('index.jade');
 });
 
+app.get('/plot', function(req, res){
+    res.render('plot.jade');
+});
+
 //LOGIN
 app.post('/login', function(req, res) {
 

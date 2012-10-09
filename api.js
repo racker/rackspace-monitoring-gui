@@ -1,5 +1,6 @@
 /* Small CloudMonitoring API helper/proxy */
 var request = require('./utils').request;
+var querystring = require('querystring');
 
 /* Get cloudMonitoring url from service catalog */
 var _get_service_url = function(service_catalog) {
@@ -78,7 +79,7 @@ var proxy_request = function(req, res) {
                'Accept': 'application/json',
                'Content-Type': 'application/json'};
 
-    request(req.session.url + req.params[0], req.route.method.toUpperCase(), JSON.stringify(req.body), headers, function(err, result) {
+    request(req.session.url + req.params[0] + '?' + querystring.stringify(req.query), req.route.method.toUpperCase(), JSON.stringify(req.body), headers, function(err, result) {
         if (err) {
             console.log('Request Error: ' + err);
             res.send(500, 'Request Error');
