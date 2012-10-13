@@ -60,6 +60,10 @@ app.get('/plot', function(req, res){
     res.render('plot.jade');
 });
 
+app.get('/plot_backbone', function(req, res){
+    res.render('plot_backbone.jade');
+});
+
 //LOGIN
 app.post('/login', function(req, res) {
 
