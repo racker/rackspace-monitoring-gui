@@ -3,13 +3,9 @@ html
   head
     title= title || "Rackspace Monitoring"
 
-    link(rel='stylesheet', href='/css/base.css')
     link(rel='stylesheet', href='/css/bootstrap.css')
     link(rel='stylesheet', href='/css/bootstrap-responsive.css')
-      
-    script(type='text/javascript', src='/js/jquery.js')
-    script(type='text/javascript', src='/js/bootstrap.js')
-    script(type='text/javascript', src='/js/jquery.ba-resize.js')
+    link(rel='stylesheet', href='/css/base.css')
 
     block header
 
@@ -17,17 +13,7 @@ html
     div.navbar.navbar-inverse.navbar-fixed-top
       div.navbar-inner
         div.container
-          a.brand(href="/")= "Rackspace Monitoring"
-          div.nav-collapse.collapse
-            ul.nav.pull-right
-              if session.username
-                li
-                  a(href="/")= session.username+" (#"+session.tenantId+")"
-                li
-                  a(href="/logout")= "(Logout)"
-              else
-                li
-                  a(href="/login")= "(Login)"
+          block navbar
 
     div.container
       block content

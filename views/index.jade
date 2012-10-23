@@ -1,4 +1,34 @@
 extends layout
 
+block header
+
+  script(data-main="/js/app", src="/js/extern/require/require.js")
+
+block navbar
+  a.btn.btn-navbar(data-toggle="collapse", data-target=".nav-collapse")
+    span.icon-bar
+    span.icon-bar
+  a.brand(href="#browser")= "Rackspace Monitoring"
+  div.nav-collapse.collapse
+    ul.nav
+      li(id="browser-view-link")
+        a(href="#browser")= "browser"
+      li(id="grapher-view-link")
+        a(href="#grapher")= "grapher"
+    ul.nav.pull-right
+      if session.username
+        li
+          a(href="#account")= session.username+" (#"+session.tenantId+")"
+        li
+          a(href="/logout")= "(Logout)"
+      else
+        li
+          a(href="/login")= "(Login)"
+
 block content
-  p= "raxmongui"
+  #browser-view-content.container
+    include browser
+  #grapher-view-content.container
+    include grapher
+  #account-view-content.container
+    include account
