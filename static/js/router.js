@@ -5,22 +5,13 @@ define([
   'underscore'
 ], function($, Backbone, _) {
 
-  var initialize, router, start;
+  var router;
+  var started = false;
 
-  initialize = function () {
+  /* Backbone router - change this to add/remove routes */
+  var getRouter = function () {
 
-      /* Hides/Shows Relevant Stuff depending on the view */
-      var _renderView = function (view) {
-          /* Switch nav link */
-          $('[id$=view-link]').removeClass('active');
-          $('#' + view + '-view-link').addClass('active');
-  
-          /* Hide/Show relevant divs */
-          $('[id$=view-content]').addClass('hide');
-          $('#' + view + '-view-content').removeClass('hide');
-      };
-
-      /* init Backbone router */
+    if (!router) {
       var Router = Backbone.Router.extend({
           
           routes: {
@@ -29,35 +20,31 @@ define([
               "account": "accountRoute",
               '*path':  'defaultRoute'
           },
-      
-          browserRoute: function (id) {
-              _renderView('browser');
-              console.log('browser route');
-          },
-      
-          grapherRoute: function (id) {
-              _renderView('grapher');
-              console.log('grapher route');
-          },
-      
-          accountRoute: function () {
-              _renderView('account');
-              console.log('account route');
-          },
-      
+
           defaultRoute: function(path) {
               window.location.hash = 'browser';
           }
       });
-
       router = new Router();
+    }
+
+    return router;
   };
 
-  /* Starts Router */
+  /* Starts Router (if needed) */
   start = function () {
-      initialize();
-      Backbone.history.start();
+      if (!started) {
+        router = getRouter();
+        Backbone.history.start();
+        started = true;
+      }
+      return router;
   };
-  return {'start': start, 'router': router};
+
+  registerHandler = function (route, f) {
+    router.on('route:'+route, f);
+  };
+
+  return {'start': start, 'router': getRouter(), 'registerHandler': registerHandler};
 
 });

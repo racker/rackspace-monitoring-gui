@@ -1,29 +1,59 @@
-/* setup common paths for require.js */
-require.config({
-  paths: {
-    jquery: '/js/extern/jquery/jquery',
-    underscore: '/js/extern/underscore/underscore',
-    backbone: '/js/extern/backbone/backbone',
-    boostrap: '/js/extern/bootstrap/bootstrap'
-  },
-  shim: {
-      'jquery': {
-          exports: '$'
-      },
-      'underscore': {
-          exports: '_'
-      },
-      'backbone': {
-          deps: ['underscore', 'jquery'],
-          exports: 'Backbone'
-      },
-      'bootstrap': ['bootstrap']
-  }
-});
-
 define([
-  'router'
-], function(Router){
-  Router.start();
-  return {};
+  'underscore',
+  'router',
+  'models/models',
+  'views/views'
+], function(_, Router, Models, Views){
+
+  var app, router;
+  var starting = false;
+  var started = false;
+
+  /* INIT */
+  var _addRouteHandlers = function () {
+    app.router.registerHandler('browserRoute', function () {Views.browserView(app);});
+    app.router.registerHandler('grapherRoute', function () {Views.grapherView(app);});
+    app.router.registerHandler('accountRoute', function () {Views.accountView(app);});
+  };
+
+  var _loadData = function (callback) {
+    /* Initial Data Load */
+    var success = function (model, response) {
+      callback();
+    };
+    /* error callback */
+    var error = function (model, response) {
+      Views.errorView();
+    };
+    var account = new Models.Account();
+    account.fetch({"success": function (model, response) {
+      model.entities.fetch({"success": success, "error": error});
+    }, "error": error});
+    app.account = account;
+  };
+
+  var startApp = function () {
+
+    if (!started && !starting) {
+      starting = true;
+
+      app = {};
+
+      /* Show loading view */
+      Views.loadingView();
+
+      /* Routing */
+      app.router = Router;
+      _addRouteHandlers();
+
+      /* Load Initial Data */
+      _loadData(function () {
+        app.router.start();
+        started = true;
+        starting = false;
+      });
+    }
+  };
+
+  return {'startApp': startApp};
 });

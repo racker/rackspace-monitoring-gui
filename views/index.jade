@@ -2,7 +2,7 @@ extends layout
 
 block header
 
-  script(data-main="/js/app", src="/js/extern/require/require.js")
+  script(data-main="/js/main", src="/js/extern/require/require.js")
 
 block navbar
   a.btn.btn-navbar(data-toggle="collapse", data-target=".nav-collapse")
@@ -26,9 +26,13 @@ block navbar
           a(href="/login")= "(Login)"
 
 block content
-  #browser-view-content.container
+  #browser-view-content.container.hide
     include browser
-  #grapher-view-content.container
+  #grapher-view-content.container.hide
     include grapher
-  #account-view-content.container
+  #account-view-content.container.hide
     include account
+  #loading-view-content.container
+    include loading
+  #error-view-content.container.hide
+    include error
