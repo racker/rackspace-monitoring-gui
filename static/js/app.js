@@ -11,7 +11,9 @@ define([
 
   /* INIT */
   var _addRouteHandlers = function () {
-    app.router.registerHandler('browserRoute', function () {Views.browserView(app);});
+    app.router.registerHandler('entitiesRoute', function () {Views.entitiesView(app);});
+    app.router.registerHandler('entityDetailsRoute', function (id) {Views.entityDetailsView(app, id);});
+    app.router.registerHandler('checkDetailsRoute', function (id, cid) {Views.checkDetailsView(app, id, cid);});
     app.router.registerHandler('grapherRoute', function () {Views.grapherView(app);});
     app.router.registerHandler('accountRoute', function () {Views.accountView(app);});
   };

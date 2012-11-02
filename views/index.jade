@@ -8,16 +8,14 @@ block navbar
   a.btn.btn-navbar(data-toggle="collapse", data-target=".nav-collapse")
     span.icon-bar
     span.icon-bar
-  a.brand(href="#browser")= "Rackspace Monitoring"
+  a.brand(href="#entities")= "Rackspace Monitoring"
   div.nav-collapse.collapse
     ul.nav
-      li(id="browser-view-link")
-        a(href="#browser")= "browser"
       li(id="grapher-view-link")
         a(href="#grapher")= "grapher"
     ul.nav.pull-right
       if session.username
-        li
+        li(id="account-view-link")
           a(href="#account")= session.username+" (#"+session.tenantId+")"
         li
           a(href="/logout")= "(Logout)"
@@ -26,8 +24,12 @@ block navbar
           a(href="/login")= "(Login)"
 
 block content
-  #browser-view-content.container.hide
-    include browser
+  #entities-view-content.container.hide
+    include entities
+  #entity-details-view-content.container.hide
+    include entity-details
+  #check-details-view-content.container.hide
+    include check-details
   #grapher-view-content.container.hide
     include grapher
   #account-view-content.container.hide

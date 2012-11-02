@@ -24,9 +24,19 @@ define([
         _renderView('loading');
     };
 
-    var browserView = function (app) {
-       Entities.render(app);
-       _renderView('browser');
+    var entitiesView = function (app) {
+       Entities.renderList(app);
+       _renderView('entities');
+    };
+
+    var entityDetailsView = function (app, id) {
+        Entities.renderDetails(app, id);
+        _renderView('entity-details');
+    };
+
+    var checkDetailsView = function (app, id, cid) {
+        Entities.renderCheckDetails(app, id, cid);
+        _renderView('check-details');
     };
 
     var grapherView = function (app) {
@@ -37,6 +47,6 @@ define([
         _renderView('account');
     };
 
-    return {'browserView': browserView, 'grapherView': grapherView, 'accountView': accountView, 'loadingView': loadingView, 'errorView': errorView};
+    return {'entitiesView': entitiesView, 'entityDetailsView': entityDetailsView, 'checkDetailsView': checkDetailsView, 'grapherView': grapherView, 'accountView': accountView, 'loadingView': loadingView, 'errorView': errorView};
 
 });

@@ -15,14 +15,16 @@ define([
       var Router = Backbone.Router.extend({
           
           routes: {
-              "browser": "browserRoute",
+              "entities": "entitiesRoute",
+              "entities/:id": "entityDetailsRoute",
+              "entities/:id/checks/:cid": "checkDetailsRoute",
               "grapher": "grapherRoute",
               "account": "accountRoute",
               '*path':  'defaultRoute'
           },
 
           defaultRoute: function(path) {
-              window.location.hash = 'browser';
+              window.location.hash = 'entities';
           }
       });
       router = new Router();

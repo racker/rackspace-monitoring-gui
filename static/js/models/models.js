@@ -111,9 +111,9 @@ define([
     
             Backbone.Model.prototype.save.call(this, cleaned_attr, options);
         },
-        entity: function(){
-            ACCOUNT.entities.fetch();
-            return ACCOUNT.entities.get(this.get('entity_id'));
+        // FIXME: it would be nice if this was automatic - this kinds sucks
+        getEntity: function(app){
+            return app.account.entities.get(this.get('entity_id'));
         }
     });
     
