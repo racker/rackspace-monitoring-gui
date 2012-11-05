@@ -41,28 +41,28 @@ define([
 
     var CheckView = Backbone.View.extend({
         tagName: 'tr',
-        template: _.template("<tr><td><%= label %></td><td><%= id %></td></tr>"),
+        template: _.template("<td><a href='#/entities/<%= entity_id %>/checks/<%= id %>'><%= label %></a></td><td><%= id %></td>"),
 
-        events: {"click": "details"},
+        // events: {"click": "details"},
 
         render: function () {
             $(this.el).html(this.template(this.model.toJSON()));
         },
 
-        details: function () {
-            window.location.hash = "entities/"+this.model.get('entity_id')+"/checks/"+this.model.get('id');
-        }
+        // details: function () {
+        //     window.location.hash = "entities/"+this.model.get('entity_id')+"/checks/"+this.model.get('id');
+        // }
     });
 
     var CheckListView = Backbone.View.extend({
         el: $('#entity-checks-list'),
         events: {},
-    
+
         initialize: function()
         {
             this._cache = {};
         },
-    
+
         render: function()
         {
             $(this.el).empty();
@@ -113,30 +113,30 @@ define([
 
     /* This should be bound to a model, so updates should rerender correctly */
     var EntityView = Backbone.View.extend({
-        tagName: 'li',
-        template: _.template("<li><%= label %></li>"),
-        events: {"click": "details"},
+        tagName: 'tr',
+        template: _.template("<td><a href='#entities/<%= id %>'><%= label %></a></td><td><%= id %></td>"),
+        //events: {"click": "details"},
 
         render: function() {
           $(this.el).html(this.template(this.model.toJSON()));
           return this;
         },
 
-        details: function () {
-            window.location.hash = "entities/" + this.model.id;
-        }
+        // details: function () {
+        //     window.location.hash = "entities/" + this.model.id;
+        // }
     });
 
     /* TODO - Ideally this is bound to the collection so updates happen automatically */
     var EntitiesView = Backbone.View.extend({
         el: $('#entity-list'),
         events: {},
-    
+
         initialize: function()
         {
             this._cache = {};
         },
-    
+
         render: function()
         {
             $(this.el).empty();
