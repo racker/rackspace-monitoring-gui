@@ -1,11 +1,11 @@
 define([
   'jquery',
   'backbone',
-  'underscore'
-], function($, Backbone, _) {
+  'underscore',
+  'app'
+], function($, Backbone, _, App) {
 
     var BASE_URL = '/proxy';
-    var account = null;
 
     // From https://gist.github.com/1610397
     function nestCollection(model, attributeName, nestedCollection) {
@@ -70,7 +70,11 @@ define([
             return response;
         },
         initialize: function() {
-            this.checks = nestCollection(this, 'checks', EntityCheckCollectionFactory(this));
+            this.checks = nestCollection(this, 'checks', new EntityCheckCollectionFactory(this));
+            this.alarms = nestCollection(this, 'alarms', new EntityAlarmCollectionFactory(this));
+        },
+        getAccount: function() {
+            return getAccount();
         }
     });
     
@@ -93,7 +97,52 @@ define([
             return depaginatedRequest(this.url()).then(options.success, options.error);
         }
     });
+
+    /* ALARMS */
+    var Alarm = Backbone.Model.extend({
+        urlRoot: function() {
+            return BASE_URL + '/entities/' + this.get('entity_id') + '/alarms/' + this.get('id');
+        },
+        save: function(attributes, options) {
+            attributes = typeof attributes !== 'undefined' ? attributes : {};
     
+            cleaned_attr = _.clone(attributes);
+            delete cleaned_attr.entity_id;
+    
+            Backbone.Model.prototype.save.call(this, cleaned_attr, options);
+        }
+    });
+    
+    function EntityAlarmCollectionFactory(entity) {
+        var C = Backbone.Collection.extend({
+            model: Alarm,
+            url: function() {
+                return BASE_URL + '/entities/' + entity.get('id') + '/alarms/';
+            },
+
+            parse: function(response) {
+                _.each(response, function(alarm) {
+                    alarm.entity_id = entity.get('id');
+                }, this);
+                return response;
+            },
+
+            filterByCheck: function(check) {
+
+                var alarms = this.reject(function (alarm) {
+                    return (alarm.get('check_id') !== check.get('id'));
+                });
+
+                return alarms;
+            },
+
+            sync: function(method, model, options) {
+                return depaginatedRequest(this.url()).then(options.success, options.error);
+            }
+        });
+        return new C();
+    }
+
     /* CHECKS */
     
     var Check = Backbone.Model.extend({
@@ -111,9 +160,8 @@ define([
     
             Backbone.Model.prototype.save.call(this, cleaned_attr, options);
         },
-        // FIXME: it would be nice if this was automatic - this kinds sucks
-        getEntity: function(app){
-            return app.account.entities.get(this.get('entity_id'));
+        getEntity: function() {
+            return App.getInstance().account.entities.get(this.get('entity_id'));
         }
     });
     
@@ -152,13 +200,13 @@ define([
     
             Backbone.Model.prototype.save.call(this, cleaned_attr, options);
         },
-        entity: function(){
-            ACCOUNT.entities.fetch();
+        getEntity: function(){
+            getAccount().entities.fetch();
             return ACCOUNT.entities.get(this.get('entity_id'));
         },
-        check: function(){
-            this.entity().checks.fetch();
-            return this.entity().checks.get(this.get('check_id'));
+        getCheck: function(){
+            this.getEntity().checks.fetch();
+            return this.getEntity().checks.get(this.get('check_id'));
         },
         data: function() {
     

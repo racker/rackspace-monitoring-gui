@@ -2,14 +2,24 @@
 define([
   'jquery',
   'backbone',
-  'underscore'
-], function($, Backbone, _) {
+  'underscore',
+  'views/views'
+], function($, Backbone, _, Views) {
 
   var router;
   var started = false;
 
+  var _addRouteHandlers = function () {
+    router.on('route:entitiesRoute', function () {Views.renderEntitiesList();});
+    router.on('route:entityDetailsRoute', function (id) {Views.renderEntityDetails(id);});
+    router.on('route:checkDetailsRoute', function (id, cid) {Views.renderCheckDetails(id, cid);});
+    router.on('route:alarmDetailsRoute', function (id, aid) {Views.renderAlarmDetails(id, aid);});
+    router.on('route:grapherRoute', function () {Views.renderGraph();});
+    router.on('route:accountRoute', function () {Views.renderAccount();});
+  };
+
   /* Backbone router - change this to add/remove routes */
-  var getRouter = function () {
+  var initialize = function () {
 
     if (!router) {
       var Router = Backbone.Router.extend({
@@ -18,6 +28,7 @@ define([
               "entities": "entitiesRoute",
               "entities/:id": "entityDetailsRoute",
               "entities/:id/checks/:cid": "checkDetailsRoute",
+              "entities/:id/alarms/:aid": "alarmDetailsRoute",
               "grapher": "grapherRoute",
               "account": "accountRoute",
               '*path':  'defaultRoute'
@@ -27,7 +38,9 @@ define([
               window.location.hash = 'entities';
           }
       });
+
       router = new Router();
+      _addRouteHandlers();
     }
 
     return router;
@@ -36,17 +49,13 @@ define([
   /* Starts Router (if needed) */
   start = function () {
       if (!started) {
-        router = getRouter();
+        router = initialize();
         Backbone.history.start();
         started = true;
       }
       return router;
   };
 
-  registerHandler = function (route, f) {
-    router.on('route:'+route, f);
-  };
-
-  return {'start': start, 'router': getRouter(), 'registerHandler': registerHandler};
+  return {'start': start};
 
 });
