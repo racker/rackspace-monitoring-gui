@@ -14,14 +14,14 @@ define([
           model.attributes[attributeName][i] = nestedCollection.at(i).attributes;
         }
         //create empty arrays if none
-    
+
         nestedCollection.bind('add', function (initiative) {
           if (!model.get(attributeName)) {
             model.attributes[attributeName] = [];
           }
           model.get(attributeName).push(initiative.attributes);
         });
-    
+
         nestedCollection.bind('remove', function (initiative) {
           var updateObj = {};
           updateObj[attributeName] = _.without(model.get(attributeName), initiative.attributes);
@@ -29,27 +29,40 @@ define([
         });
         return nestedCollection;
     }
-    
+
     // Depaginate results from url
     function depaginatedRequest(url) {
         var d = $.Deferred();
         var l = [];
-    
+
+        // "http://example.com/page?foo=bar&baz=bat" --> ["http://example.com/page", "foo=bar&baz=bat"]
+        var parsed_url = url.split('?', 2);
+
+        // "http://example.com/page"
+        var base_url = parsed_url[0] || '';
+
+        // ["foo=bar", "baz=bat"]
+        var query_params = (parsed_url[1] || '').split('&');
+
+        function constructURL(base, params) {
+            return [base, params.join('&')].join('?');
+        }
+
         function handlePage(data) {
             l = l.concat(data.values);
-    
+
             /* FIXME */
             if(data.metadata.next_marker == null ) {
                 d.resolve(l);
             } else {
-                $.getJSON(url + "?marker=" + data.metadata.next_marker, handlePage);
+                $.getJSON(constructURL(base_url, query_params.concat(['marker=' + data.metadata.next_marker])), handlePage);
             }
         }
-    
-        $.getJSON(url, handlePage);
+
+        $.getJSON(constructURL(base_url, query_params), handlePage);
         return d.promise();
     }
-        
+
     var Account = Backbone.Model.extend({
         url: function() {
             return BASE_URL + '/account';
@@ -58,7 +71,7 @@ define([
             this.entities = nestCollection(this, 'entities', new AccountEntityCollection([], {account: this}));
         }
     });
-    
+
     /* ENTITIES */
     var Entity = Backbone.Model.extend({
         url: function() {
@@ -77,7 +90,7 @@ define([
             return getAccount();
         }
     });
-    
+
     var AccountEntityCollection = Backbone.Collection.extend({
         model: Entity,
         initialize: function(models, options) {
@@ -90,7 +103,7 @@ define([
             _.each(response, function(entity) {
                 entity.account = this.account;
             }, this);
-    
+
             return response;
         },
         sync: function(method, model, options) {
@@ -105,14 +118,14 @@ define([
         },
         save: function(attributes, options) {
             attributes = typeof attributes !== 'undefined' ? attributes : {};
-    
+
             cleaned_attr = _.clone(attributes);
             delete cleaned_attr.entity_id;
-    
+
             Backbone.Model.prototype.save.call(this, cleaned_attr, options);
         }
     });
-    
+
     function EntityAlarmCollectionFactory(entity) {
         var C = Backbone.Collection.extend({
             model: Alarm,
@@ -144,7 +157,7 @@ define([
     }
 
     /* CHECKS */
-    
+
     var Check = Backbone.Model.extend({
         urlRoot: function() {
             return BASE_URL + '/entities/' + this.get('entity_id') + '/checks/';
@@ -154,17 +167,17 @@ define([
         },
         save: function(attributes, options) {
             attributes = typeof attributes !== 'undefined' ? attributes : {};
-    
+
             cleaned_attr = _.clone(attributes);
             delete cleaned_attr.entity_id;
-    
+
             Backbone.Model.prototype.save.call(this, cleaned_attr, options);
         },
         getEntity: function() {
             return App.getInstance().account.entities.get(this.get('entity_id'));
         }
     });
-    
+
     function EntityCheckCollectionFactory(entity) {
         var C = Backbone.Collection.extend({
             model: Check,
@@ -175,7 +188,7 @@ define([
                 _.each(response, function(check) {
                     check.entity_id = entity.id;
                 }, this);
-    
+
                 return response;
             },
             sync: function(method, model, options) {
@@ -184,20 +197,20 @@ define([
         });
         return new C();
     }
-    
+
     /* METRICS */
-    
+
     var Metric = Backbone.Model.extend({
         urlRoot: function() {
             return BASE_URL + '/entities/' + this.get('entity_id') + '/checks/' + this.get('check_id') + '/metrics/' + this.get('name');
         },
         save: function(attributes, options) {
             attributes = typeof attributes !== 'undefined' ? attributes : {};
-    
+
             cleaned_attr = _.clone(attributes);
             delete cleaned_attr.entity_id;
             delete cleaned_attr.check_id;
-    
+
             Backbone.Model.prototype.save.call(this, cleaned_attr, options);
         },
         getEntity: function(){
@@ -208,12 +221,13 @@ define([
             this.getEntity().checks.fetch();
             return this.getEntity().checks.get(this.get('check_id'));
         },
-        data: function() {
-    
+        getData: function(start_time, end_time, points, options) {
+            return depaginatedRequest(this.url() + '?from=' + start_time + '&to=' + end_time + '&points=' + points).then(options.success, options.error);
+
         }
     });
-    
-    
+
+
     function CheckMetricCollectionFactory(check) {
         var C = Backbone.Collection.extend({
             model: Metric,
@@ -225,7 +239,7 @@ define([
                     metric.entity_id = check.get('entity_id');
                     metric.check_id = check.id;
                 }, this);
-    
+
                 return response;
             },
             sync: function(method, model, options) {
@@ -234,6 +248,6 @@ define([
         });
         return new C();
     }
-    
+
     return {'Account': Account, 'Entity': Entity, 'Check': Check};
 });
