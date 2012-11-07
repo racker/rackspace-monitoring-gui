@@ -215,7 +215,7 @@ define([
         },
         getEntity: function(){
             getAccount().entities.fetch();
-            return ACCOUNT.entities.get(this.get('entity_id'));
+            return App.getInstance().account.entities.get(this.get('entity_id'));
         },
         getCheck: function(){
             this.getEntity().checks.fetch();

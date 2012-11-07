@@ -3,8 +3,9 @@ define([
   'jquery',
   'backbone',
   'underscore',
-  'views/views'
-], function($, Backbone, _, Views) {
+  'views/views',
+  'views/graph'
+], function($, Backbone, _, Views, Graph) {
 
   var router;
   var started = false;
@@ -14,7 +15,7 @@ define([
     router.on('route:entityDetailsRoute', function (id) {Views.renderEntityDetails(id);});
     router.on('route:checkDetailsRoute', function (id, cid) {Views.renderCheckDetails(id, cid);});
     router.on('route:alarmDetailsRoute', function (id, aid) {Views.renderAlarmDetails(id, aid);});
-    router.on('route:grapherRoute', function () {Views.renderGraph();});
+    router.on('route:grapherRoute', function () {Graph.renderGraph();});
     router.on('route:accountRoute', function () {Views.renderAccount();});
   };
 

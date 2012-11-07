@@ -304,6 +304,7 @@ define([
             'renderGraph': renderGraph,
             'renderAccount': renderAccount,
             'renderLoading': renderLoading,
-            'renderError': renderError};
+            'renderError': renderError,
+            'renderView': _renderView};
 
 });
