@@ -222,8 +222,44 @@ define([
             return this.getEntity().checks.get(this.get('check_id'));
         },
         getData: function(start_time, end_time, points, options) {
-            return depaginatedRequest(this.url() + '?from=' + start_time + '&to=' + end_time + '&points=' + points).then(options.success, options.error);
+            /* Returns data for this metric between start_time and end_time, either in raw or rolled-up form.
 
+                Parameters:
+                    start_time: Date object, or number of ms since UNIX epoch (see Date.getTime())
+                    end_time: Date object, or number of ms since UNIX epoch (see Date.getTime())
+                    points: Approximate number of points to be returned
+                    options.success: Success callback
+                    options.error: Error callback
+            */
+            if(start_time.getTime) {
+                start_time = start_time.getTime();
+            }
+            if(end_time.getTime) {
+                end_time = end_time.getTime();
+            }
+
+            function formatData(list) {
+                _.each(list, function(d) {
+                    d.timestamp = new Date(d.timestamp);
+                }, this);
+                return list;
+            };
+            return depaginatedRequest(this.url() + '?from=' + start_time + '&to=' + end_time + '&points=' + points).done(formatData).then(options.success, options.error);
+        },
+        getRecentData: function(period, points, options) {
+            /* Returns most recent data of a length specified by period
+
+                Parameters:
+                    period: Length of data period in ms
+                    points: Approximate number of points to be returned
+                    options.success: Success callback
+                    options.error: Error callback
+            */
+            var end_time = (new Date()).getTime();
+
+            var start_time = end_time - period;
+
+            return this.getData(start_time, end_time, points, options);
         }
     });
 
@@ -239,7 +275,6 @@ define([
                     metric.entity_id = check.get('entity_id');
                     metric.check_id = check.id;
                 }, this);
-
                 return response;
             },
             sync: function(method, model, options) {
@@ -249,5 +284,5 @@ define([
         return new C();
     }
 
-    return {'Account': Account, 'Entity': Entity, 'Check': Check};
+    return {'Account': Account, 'Entity': Entity, 'Check': Check, 'Metric': Metric};
 });
