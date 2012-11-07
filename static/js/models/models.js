@@ -259,7 +259,7 @@ define([
 
             var start_time = end_time - period;
 
-            return this.getData(start_time, end_time, options);
+            return this.getData(start_time, end_time, points, options);
         }
     });
 
