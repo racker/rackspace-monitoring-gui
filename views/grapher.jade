@@ -1,16 +1,21 @@
-.row
-  .span12
-    svg#graphersvg
-
-.row
-  .span4
-    h4= 'Entities'
-    table.table.table-hover#entity-table
-
-  .span4
-    h4= 'Checks'
-    table.table.table-hover#check-table
-
-  .span4
-    h4= 'Metrics'
-    table.table.table-hover#metric-table
+.container-fluid
+  .row-fluid
+    .span2
+      h4= "Saved Graphs"
+  
+    .span8
+      .row
+        .span12
+          h4= "Graph Goes Here"
+      .row
+        .span4
+          h4= 'Entities'
+          table.table.table-hover#entity-table
+  
+        .span4
+          h4= 'Checks'
+          table.table.table-hover#check-table
+  
+        .span4
+          h4= 'Metrics'
+          table.table.table-hover#metric-table
