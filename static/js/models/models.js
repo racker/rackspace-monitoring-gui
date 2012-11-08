@@ -243,7 +243,7 @@ define([
                     d.timestamp = new Date(d.timestamp);
                 }, this);
                 return list;
-            };
+            }
             return depaginatedRequest(this.url() + '?from=' + start_time + '&to=' + end_time + '&points=' + points).done(formatData).then(options.success, options.error);
         },
         getRecentData: function(period, points, options) {

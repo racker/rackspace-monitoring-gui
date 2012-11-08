@@ -5,13 +5,20 @@
 require.config({
   paths: {
     jquery: '/js/extern/jquery/jquery',
+    jqueryui: '/js/extern/jquery/jquery-ui',
     underscore: '/js/extern/underscore/underscore',
     backbone: '/js/extern/backbone/backbone',
-    boostrap: '/js/extern/bootstrap/bootstrap'
+    boostrap: '/js/extern/bootstrap/bootstrap',
+    d3: '/js/extern/d3/d3',
+    d3layout: '/js/extern/d3/d3layout',
+    rickshaw: '/js/extern/rickshaw/rickshaw'
   },
   shim: {
       'jquery': {
           exports: '$'
+      },
+      'jqueryui': {
+        deps: ['jquery']
       },
       'underscore': {
           exports: '_'
@@ -20,7 +27,17 @@ require.config({
           deps: ['underscore', 'jquery'],
           exports: 'Backbone'
       },
-      'bootstrap': ['bootstrap']
+      'bootstrap': ['bootstrap'],
+      'd3': {
+        exports: 'd3'
+      },
+      'd3layout': {
+        deps: ['d3']
+      },
+      'rickshaw': {
+        deps: ['jquery', 'jqueryui', 'd3', 'd3layout'],
+        exports: 'Rickshaw'
+      }
   }
 });
 
