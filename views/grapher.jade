@@ -1,26 +1,24 @@
 .container-fluid
   .row-fluid
-    .span2
+    .span3
       h4= "Saved Graphs"
-  
-    .span8
-      .row
-        .span12
-          #chart_container.chart
-            #chart
-            #legend_container
-              #smoother(title="Something")
-              #legend
-            #slider
-      .row
-        .span4
-          h4= 'Entities'
-          table.table.table-condensed.table-hover#entity-table
-  
-        .span4
-          h4= 'Checks'
-          table.table.table-condensed.table-hover#check-table
-  
-        .span4
-          h4= 'Metrics'
-          table.table.table-condensed.table-hover#metric-table
+
+    #chart_container.chart.span9
+      #chart
+      #legend_container
+        #smoother(title="Something")
+        #legend
+      #slider
+
+    .row-fluid
+      .span4
+        h4= 'Entities'
+        table.table.table-condensed.table-hover#entity-table
+
+      .span4
+        h4= 'Checks'
+        table.table.table-condensed.table-hover#check-table
+
+      .span4
+        h4= 'Metrics'
+        table.table.table-condensed.table-hover#metric-table

@@ -9,6 +9,8 @@ define([
 
     var seriesData, palette, graph, hoverDetail, axes;
 
+    var el = $('#chart');
+
     var hour = 60*60*1000;
     var dates = {
         "hour": {text: "Last hour", offset: hour, dateformat: "%l:%M"},
@@ -45,13 +47,6 @@ define([
     function getOffset(period) {
         var offset = new Date(now() - dates[period].offset);
         return offset;
-    }
-
-    function getSeries() {
-        if (!seriesData) {
-            seriesData = [];
-        }
-        return seriesData;
     }
 
     var EntityView = Backbone.View.extend({
@@ -263,8 +258,10 @@ define([
     }
 
     function getSeries() {
-
-
+        if (!seriesData) {
+            seriesData = [];
+        }
+        return seriesData;
     }
 
     function setPeriod(period) {
@@ -278,6 +275,7 @@ define([
     }
 
     function _renderGraph () {
+        console.log("RESIZE!")
 
         var d = getSeries();
         if (!d) {
@@ -286,10 +284,10 @@ define([
 
         if (!graph) {
             graph = new Rickshaw.Graph( {
-                element: $('#chart').get(0),
+                element: el.get(0),
                 renderer: 'line',
-                width: 960,
-                height: 500,
+                width: $('#chart_container').width(),
+                height: 400,
                 series: d
             } );
 
@@ -299,11 +297,16 @@ define([
                 graph: graph
             } );
 
-            axes = new Rickshaw.Graph.Axis.Time( {
+            xAxis = new Rickshaw.Graph.Axis.Time( {
                 graph: graph
             } );
+            xAxis.render();
 
-            axes.render();
+
+            var yAxis = new Rickshaw.Graph.Axis.Y({
+                graph: graph
+            });
+            yAxis.render();
 
         } else {
             graph.update();
@@ -321,6 +324,8 @@ define([
         _populateEntityTable();
 
     }
+
+    $(window).resize(_renderGraph);
 
     return {'renderGraph': renderGraph, 'addSeries': addSeries, 'delSeries': delSeries, 'getSeries': getSeries, 'setPeriod': setPeriod, 'getPeriod': getPeriod};
 
