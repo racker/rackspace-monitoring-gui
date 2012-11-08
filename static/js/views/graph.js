@@ -113,7 +113,7 @@ define([
 
     var EntityListView = Backbone.View.extend({
         events: {},
-    
+
         render: function()
         {
             $(this.el).empty();
@@ -132,7 +132,7 @@ define([
 
     var CheckListView = Backbone.View.extend({
         events: {},
-    
+
         render: function()
         {
             $(this.el).empty();
@@ -151,7 +151,7 @@ define([
 
     var MetricListView = Backbone.View.extend({
         events: {},
-    
+
         render: function()
         {
             $(this.el).empty();
@@ -235,7 +235,7 @@ define([
     function addSeries (metric) {
 
         var get_data_success = function (data) {
-            
+
             var d = {'color': palette.color(),
                      'data': [],
                      'name': metric.get('name')};
@@ -255,6 +255,26 @@ define([
         };
 
         metric.getData(getDate('hour'), getDate(), 10, {'success': get_data_success, 'error': get_data_error});
+    }
+
+    function delSeries(metric) {
+
+
+    }
+
+    function getSeries() {
+
+
+    }
+
+    function setPeriod(period) {
+
+
+    }
+
+    function getPeriod() {
+
+
     }
 
     function _renderGraph () {
@@ -278,7 +298,7 @@ define([
             hoverDetail = new Rickshaw.Graph.HoverDetail( {
                 graph: graph
             } );
-        
+
             axes = new Rickshaw.Graph.Axis.Time( {
                 graph: graph
             } );
@@ -302,6 +322,6 @@ define([
 
     }
 
-    return {'renderGraph': renderGraph};
+    return {'renderGraph': renderGraph, 'addSeries': addSeries, 'delSeries': delSeries, 'getSeries': getSeries, 'setPeriod': setPeriod, 'getPeriod': getPeriod};
 
 });
