@@ -4,10 +4,12 @@ define([
   'underscore',
   'app',
   'views/views',
+  'models/models',
   'rickshaw'
-], function($, Backbone, _, App, Views, Rickshaw) {
+], function($, Backbone, _, App, Views, Models, Rickshaw) {
 
     var seriesData, palette, graph, hoverDetail, axes;
+    var savedGraphListView;
 
     var el = $('#chart');
 
@@ -163,6 +165,74 @@ define([
         }
     });
 
+    var SavedGraphView = Backbone.View.extend({
+        tagName: 'tr',
+        className: 'saved-graph-row',
+        template: _.template("<td><a class='select'><%= name %></a></td><td><a class='delete'>delete</a></td>"),
+
+        events: {'click .select': 'clickHandler',
+                 'click .delete': 'deleteHandler'},
+
+        deleteHandler: function () {
+            this.model.destroy({'wait': true});
+        },
+
+        clickHandler: function () {
+            $('.' + this.className).removeClass('success');
+            $(this.el).addClass('success');
+            window.location.hash = 'grapher/' + this.model.id;
+        },
+
+        render: function () {
+            $(this.el).addClass('clickable');
+            $(this.el).html(this.template(this.model.toJSON()));
+        }
+    });
+
+    var SavedGraphListView = Backbone.View.extend({
+        events: {},
+
+        initialize: function() {
+            this.collection.on('add', this.render.bind(this));
+            this.collection.on('remove', this.render.bind(this));
+            this.rendered = false;
+        },
+
+        render: function()
+        {
+            $(this.el).empty();
+            this.collection.each(function (graph) {
+                this.add(graph);
+            }.bind(this));
+            this.rendered = true;
+            return this;
+        },
+
+        add: function(m)
+        {
+            var e = new SavedGraphView({
+                model: m
+            });
+            e.render();
+            $(this.el).append(e.el);
+        }
+    });
+
+    var SavedGraphButton = Backbone.View.extend ({
+
+        el: $('#save-graph-button'),
+        events: {'click': 'clickHandler'},
+
+        clickHandler: function () {
+            var dummyGraph = {
+                name: 'testGraph-'+getDate().getTime(),
+                series: []
+            };
+            App.getInstance().account.graphs.create(dummyGraph, {'wait': true});
+        }
+
+    });
+
     function _populateMetricTable (check) {
         var app = App.getInstance();
         var metricListView;
@@ -226,6 +296,33 @@ define([
 
     }
 
+    function _populateSavedGraphsTable() {
+
+        var app = App.getInstance();
+        var savedGraphButton;
+
+        var graph_fetch_success = function (collection, response) {
+
+            if (!savedGraphListView) {
+                savedGraphListView = new SavedGraphListView({'el': $('#saved-graph-table'), 'collection': collection});
+            }
+            if (!savedGraphListView.rendered) {
+                savedGraphListView.render();
+            }
+        };
+
+        var graph_fetch_failure = function (collection, response) {
+            $('#saved-graph-table').html('<tr><td>Failed to fetch graphs</td></tr>');
+
+        };
+
+        savedGraphButton = new SavedGraphButton();
+        savedGraphButton.render();
+
+        app.account.graphs.fetch({"success": graph_fetch_success, "error": graph_fetch_failure});
+
+    }
+
     // Add a metric series to the current graph or make a new graph
     function addSeries (metric) {
 
@@ -275,7 +372,7 @@ define([
     }
 
     function _renderGraph () {
-        console.log("RESIZE!")
+        console.log("RESIZE!");
 
         var d = getSeries();
         if (!d) {
@@ -313,7 +410,7 @@ define([
         }
     }
 
-    function renderGraph () {
+    function renderGraph (id) {
 
         Views.renderView('grapher');
 
@@ -321,7 +418,12 @@ define([
             palette = new Rickshaw.Color.Palette();
         }
 
+        $('#check-table').empty();
+        $('#entity-table').empty();
+        $('#metric-table').empty();
+
         _populateEntityTable();
+        _populateSavedGraphsTable();
 
     }
 
