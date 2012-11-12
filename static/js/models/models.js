@@ -244,7 +244,14 @@ define([
                 }, this);
                 return list;
             }
-            return depaginatedRequest(this.url() + '?from=' + start_time + '&to=' + end_time + '&points=' + points).done(formatData).then(options.success, options.error);
+
+            var req = depaginatedRequest(this.url() + '?from=' + start_time + '&to=' + end_time + '&points=' + points).done(formatData);
+
+            if(options != undefined) {
+                return req.then(options.success, options.error);
+            } else {
+                return req;
+            }
         },
         getRecentData: function(period, points, options) {
             /* Returns most recent data of a length specified by period

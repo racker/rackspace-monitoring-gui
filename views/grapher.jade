@@ -3,12 +3,18 @@
     .span3
       h4= "Saved Graphs"
 
-    #chart_container.chart.span9
-      #chart
-      #legend_container
-        #smoother(title="Something")
-        #legend
-      #slider
+    #chart.span9
+      //- span Days by Gain or Loss
+      //- a.reset(href='javascript:gainOrLossChart.filterAll();dc.redrawAll();', style='display: none;') reset
+      //- span.reset(style='display: none;')= "Current filter:"
+      //- span.filter
+
+    //- #chart_container.chart.span9
+    //-   #chart
+    //-   #legend_container
+    //-     #smoother(title="Something")
+    //-     #legend
+    //-   #slider
 
     .row-fluid
       .span4

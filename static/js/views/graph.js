@@ -4,12 +4,13 @@ define([
   'underscore',
   'app',
   'views/views',
-  'rickshaw'
-], function($, Backbone, _, App, Views, Rickshaw) {
+  'dc',
+  'jqueryresize'
+], function($, Backbone, _, App, Views, dc) {
 
-    var seriesData, palette, graph, hoverDetail, axes;
-
-    var el = $('#chart');
+    var metrics = [];
+    var palette = d3.scale.category10();
+    var graph, hoverDetail, axes;
 
     var hour = 60*60*1000;
     var dates = {
@@ -228,28 +229,8 @@ define([
 
     // Add a metric series to the current graph or make a new graph
     function addSeries (metric) {
-
-        var get_data_success = function (data) {
-
-            var d = {'color': palette.color(),
-                     'data': [],
-                     'name': metric.get('name')};
-            var series = getSeries();
-            _.each(data, function (point) {
-                d.data.push({'x': point.timestamp.getTime(),
-                             'y': point.average});
-            });
-            series.push(d);
-
-            _renderGraph();
-
-        };
-
-        var get_data_error = function () {
-            console.log('Failed to fetch metric data');
-        };
-
-        metric.getData(getDate('hour'), getDate(), 10, {'success': get_data_success, 'error': get_data_error});
+        metrics.push(metric);
+        _renderGraph();
     }
 
     function delSeries(metric) {
@@ -271,61 +252,111 @@ define([
 
     function getPeriod() {
 
+    }
+
+    function _getRecentData(metric, options) {
+        return metric.getRecentData(1000*60*60*24, 100, options);
+    }
+
+
+    function _makeChart(data) {
 
     }
 
-    function _renderGraph () {
-        console.log("RESIZE!")
+    /* Fetch */
+    function _getChart(metric, parentChart) {
+        return _getRecentData(metric).then(function(response) {
+            var data = crossfilter(response);
 
-        var d = getSeries();
-        if (!d) {
-            return;
-        }
-
-        if (!graph) {
-            graph = new Rickshaw.Graph( {
-                element: el.get(0),
-                renderer: 'line',
-                width: $('#chart_container').width(),
-                height: 400,
-                series: d
-            } );
-
-            graph.render();
-
-            hoverDetail = new Rickshaw.Graph.HoverDetail( {
-                graph: graph
-            } );
-
-            xAxis = new Rickshaw.Graph.Axis.Time( {
-                graph: graph
-            } );
-            xAxis.render();
-
-
-            var yAxis = new Rickshaw.Graph.Axis.Y({
-                graph: graph
+            /* Create a timestamp dimension for this data */
+            var dataByTimestamp = data.dimension(function(d){
+                return d.timestamp;
             });
-            yAxis.render();
 
-        } else {
-            graph.update();
-        }
+            /* For each timestamp, the "group" is the average */
+            var dataByTimestampGroup = dataByTimestamp.group().reduceSum(function(d) {
+                return d.average;
+            });
+
+            var min = Math.min.apply(null, _.map(dataByTimestampGroup.all(), function(d){return d.value;}));
+
+            var max = Math.max.apply(null, _.map(dataByTimestampGroup.all(), function(d){return d.value;}));
+
+            return [dc.lineChart(parentChart).dimension(dataByTimestamp).group(dataByTimestampGroup), min, max]; //.y(d3.scale.linear().domain([min, max]));
+        });
+    }
+
+    /* Return a list of charts, one for each metric, that are suitable to constuct a compound chart for graphing */
+    function _getCharts(parentChart) {
+        return _.map(metrics, function(m){
+            return _getChart(m, parentChart);
+        });
+    }
+
+    function _renderGraph () {
+        /* Get a list of deferreds, one for each chart to be generated, based upon asynchronous
+           HTTP requests to the monitoring API. When all deferreds are done, then construct the
+           composite chart and render it. */
+
+        var chart = dc.compositeChart("#chart");
+
+        var fake = crossfilter([{x:0, y:1}]);
+
+        var fakeDimension = fake.dimension(function(d){
+            return d.x;
+        });
+
+        var fakeGroup = fakeDimension.group().reduceSum(function(d){
+            return d.y;
+        });
+
+        $.when.apply(this, _getCharts(chart)).done(function(){
+
+            var charts = _.map(arguments, function(d){return d[0];});
+
+            // Perform some math to find the min for the y axis
+            var mins = _.map(arguments, function(d){return d[1];});
+            mins.push(0);
+            var min = Math.min.apply(null, mins);
+
+            // Perform some math to find the max for the y axis
+            var maxs = _.map(arguments, function(d){return d[2];});
+            maxs.push(0);
+            var max = Math.max.apply(null, maxs);
+
+
+            chart.width($('#chart').width())
+            .height(400)
+            .transitionDuration(500)
+            .margins({top: 10, right: 10, bottom: 30, left: 40})
+            .dimension(fakeDimension)
+            .group(fakeGroup)
+            .yAxisPadding(100)
+            .xAxisPadding(500)
+            .x(d3.time.scale().domain([getDate("day"), getDate()]))
+            .y(d3.scale.linear().domain([min, max]))
+            .renderHorizontalGridLines(true)
+            .renderVerticalGridLines(true)
+            .compose(charts) // Use magic arguments "array" containind all of the constructed charts
+            .brushOn(false);
+
+            dc.renderAll();
+        });
+
     }
 
     function renderGraph () {
 
         Views.renderView('grapher');
 
-        if (!palette) {
-            palette = new Rickshaw.Color.Palette();
-        }
-
         _populateEntityTable();
+
+        _renderGraph();
+        $("#chart").resize(_renderGraph);
 
     }
 
-    $(window).resize(_renderGraph);
+
 
     return {'renderGraph': renderGraph, 'addSeries': addSeries, 'delSeries': delSeries, 'getSeries': getSeries, 'setPeriod': setPeriod, 'getPeriod': getPeriod};
 

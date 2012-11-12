@@ -5,20 +5,21 @@
 require.config({
   paths: {
     jquery: '/js/extern/jquery/jquery',
-    jqueryui: '/js/extern/jquery/jquery-ui',
+    jqueryresize: '/js/extern/jquery/jquery.ba-resize',
     underscore: '/js/extern/underscore/underscore',
     backbone: '/js/extern/backbone/backbone',
     boostrap: '/js/extern/bootstrap/bootstrap',
-    d3: '/js/extern/d3/d3',
-    d3layout: '/js/extern/d3/d3layout',
-    rickshaw: '/js/extern/rickshaw/rickshaw'
+    crossfilter: '/js/extern/d3/d3.v2',
+    d3: '/js/extern/crossfilter/crossfilter',
+    dc: '/js/extern/dc/dc'
   },
   shim: {
       'jquery': {
           exports: '$'
       },
-      'jqueryui': {
-        deps: ['jquery']
+      'jqueryresize': {
+          deps: ['jquery'],
+          //exports: '$'
       },
       'underscore': {
           exports: '_'
@@ -31,12 +32,12 @@ require.config({
       'd3': {
         exports: 'd3'
       },
-      'd3layout': {
-        deps: ['d3']
+      'crossfilter': {
+        exports: 'crossfilter'
       },
-      'rickshaw': {
-        deps: ['jquery', 'jqueryui', 'd3', 'd3layout'],
-        exports: 'Rickshaw'
+      'dc': {
+        deps: ['jquery', 'd3', 'crossfilter'],
+        exports: 'dc'
       }
   }
 });
@@ -52,7 +53,7 @@ define([
   var account, router;
 
   var initialize = function (account, callback) {
-    
+
     var error = function (model, response) {
       Views.errorView();
     };
