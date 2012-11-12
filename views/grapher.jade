@@ -4,17 +4,17 @@
       h4= "Saved Graphs"
 
     #chart.span9
-      //- span Days by Gain or Loss
-      //- a.reset(href='javascript:gainOrLossChart.filterAll();dc.redrawAll();', style='display: none;') reset
-      //- span.reset(style='display: none;')= "Current filter:"
-      //- span.filter
+      #daterangeselect.btn-group.pull-right
+        button.btn.dropdown-toggle(data-toggle='dropdown')
+          | Time Scale
+          span.caret
+        ul.dropdown-menu
 
-    //- #chart_container.chart.span9
-    //-   #chart
-    //-   #legend_container
-    //-     #smoother(title="Something")
-    //-     #legend
-    //-   #slider
+      //- #axisselect.btn-group
+      //-   button.btn.dropdown-toggle(data-toggle='dropdown')
+      //-     | Axis Style
+      //-     span.caret
+      //-   ul.dropdown-menu
 
     .row-fluid
       .span4

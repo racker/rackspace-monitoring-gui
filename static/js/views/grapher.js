@@ -2,7 +2,8 @@ define([
   'jquery',
   'backbone',
   'underscore',
-  'models/models'
+  'models/models',
+  'bootstrap'
 ], function($, Backbone, _, Models) {
 
     var grapherView;

@@ -5,7 +5,8 @@ define([
   'app',
   'views/views',
   'dc',
-  'jqueryresize'
+  'jqueryresize',
+  'bootstrap'
 ], function($, Backbone, _, App, Views, dc) {
 
     metricMap = {};
@@ -25,10 +26,23 @@ define([
 
     };
 
+    _.each(dates, function(p) {
+        $target = $("#daterangeselect > ul");
+
+        $target.append(
+            $('<li>').append(
+                $('<a>').click(function() {setPeriod(p.offset);})
+                .append(p.text)
+            )
+
+        );
+    });
+
     var period = dates["day"].offset;
 
     function setPeriod(p) {
         period = p;
+        _renderGraph();
     }
 
     function getPeriod() {
@@ -268,11 +282,10 @@ define([
     function toggleMetric(metric) {
         if(inMetrics(metric)) {
             delMetric(metric);
-            return false;
         } else {
             addMetric(metric);
-            return true;
         }
+        _renderGraph();
     }
 
     function _getRecentData(metric, options) {

@@ -8,7 +8,7 @@ require.config({
     jqueryresize: '/js/extern/jquery/jquery.ba-resize',
     underscore: '/js/extern/underscore/underscore',
     backbone: '/js/extern/backbone/backbone',
-    boostrap: '/js/extern/bootstrap/bootstrap',
+    bootstrap: '/js/extern/bootstrap/bootstrap',
     crossfilter: '/js/extern/d3/d3.v2',
     d3: '/js/extern/crossfilter/crossfilter',
     dc: '/js/extern/dc/dc'
@@ -18,8 +18,7 @@ require.config({
           exports: '$'
       },
       'jqueryresize': {
-          deps: ['jquery'],
-          //exports: '$'
+          deps: ['jquery']
       },
       'underscore': {
           exports: '_'
@@ -28,7 +27,9 @@ require.config({
           deps: ['underscore', 'jquery'],
           exports: 'Backbone'
       },
-      'bootstrap': ['bootstrap'],
+      'bootstrap': {
+        deps: ['jquery']
+      },
       'd3': {
         exports: 'd3'
       },
