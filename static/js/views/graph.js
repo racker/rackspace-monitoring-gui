@@ -449,7 +449,7 @@ define([
             .yAxisPadding(100)
             .xAxisPadding(500)
             .x(d3.time.scale().domain(getDomain()))
-            .y(d3.scale.linear().domain([min, max]))
+            .y(d3.scale.linear().domain([min, max*1.25]))
             .renderHorizontalGridLines(true)
             .renderVerticalGridLines(true)
             .compose(charts) // Use magic arguments "array" containind all of the constructed charts
