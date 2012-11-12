@@ -8,11 +8,12 @@ define([
   'jqueryresize'
 ], function($, Backbone, _, App, Views, dc) {
 
-    var metrics = [];
+    metricMap = {};
     var palette = d3.scale.category10();
     var graph, hoverDetail, axes;
 
     var hour = 60*60*1000;
+
     var dates = {
         "hour": {text: "Last hour", offset: hour, dateformat: "%l:%M"},
         "6hour": {text: "Last 3 hours", offset: 3*hour, dateformat: "%l:%M"},
@@ -23,6 +24,16 @@ define([
         "year": {text: "Last year", offset: 365*24*hour}
 
     };
+
+    var period = dates["day"].offset;
+
+    function setPeriod(p) {
+        period = p;
+    }
+
+    function getPeriod() {
+        return period;
+    }
 
     /*
      * returns a Date() object
@@ -35,19 +46,13 @@ define([
         if (!offset) {
             return now;
         } else {
-            var now_ms = Math.round(now.getTime());
-            var offset_ms = dates[offset].offset;
-            return new Date(now_ms - offset_ms);
+            var now_ms = now.getTime();
+            return new Date(now_ms - offset);
         }
     }
 
-    /*
-     * returns a Date() object offset by the given period
-     * period - a key in the 'dates' object
-     */
-    function getOffset(period) {
-        var offset = new Date(now() - dates[period].offset);
-        return offset;
+    function getDomain() {
+        return [getDate(getPeriod()), getDate()];
     }
 
     var EntityView = Backbone.View.extend({
@@ -97,12 +102,19 @@ define([
         events: {'click': 'clickHandler'},
 
         clickHandler: function () {
-            $(this.el).addClass('success');
-            addSeries(this.model);
+            toggleMetric(this.model);
+            if(inMetrics(this.model)) {
+                $(this.el).addClass('success');
+            } else {
+                $(this.el).removeClass('success');
+            }
         },
 
         render: function () {
             $(this.el).addClass('clickable');
+            if(inMetrics(this.model)) {
+                $(this.el).addClass('success');
+            }
             $(this.el).html(this.template(this.model.toJSON()));
         }
     });
@@ -227,40 +239,44 @@ define([
 
     }
 
-    // Add a metric series to the current graph or make a new graph
-    function addSeries (metric) {
-        metrics.push(metric);
+    function _getMetricKey(metric) {
+        return [metric.get('entity_id'), metric.get('check_id'), metric.get('name')].join();
+    }
+
+    function inMetrics(metric) {
+        return _getMetricKey(metric) in metricMap;
+    }
+
+    function addMetric (metric) {
+        metricMap[_getMetricKey(metric)] = metric;
         _renderGraph();
     }
 
-    function delSeries(metric) {
-
-
+    function delMetric(metric) {
+        delete metricMap[_getMetricKey(metric)];
+        _renderGraph();
     }
 
-    function getSeries() {
-        if (!seriesData) {
-            seriesData = [];
+    function getMetrics() {
+        var metrics = [];
+        for(var key in metricMap) {
+            metrics.push(metricMap[key]);
         }
-        return seriesData;
+        return metrics;
     }
 
-    function setPeriod(period) {
-
-
-    }
-
-    function getPeriod() {
-
+    function toggleMetric(metric) {
+        if(inMetrics(metric)) {
+            delMetric(metric);
+            return false;
+        } else {
+            addMetric(metric);
+            return true;
+        }
     }
 
     function _getRecentData(metric, options) {
-        return metric.getRecentData(1000*60*60*24, 100, options);
-    }
-
-
-    function _makeChart(data) {
-
+        return metric.getRecentData(getPeriod(), 100, options);
     }
 
     /* Fetch */
@@ -288,7 +304,7 @@ define([
 
     /* Return a list of charts, one for each metric, that are suitable to constuct a compound chart for graphing */
     function _getCharts(parentChart) {
-        return _.map(metrics, function(m){
+        return _.map(getMetrics(), function(m){
             return _getChart(m, parentChart);
         });
     }
@@ -333,7 +349,7 @@ define([
             .group(fakeGroup)
             .yAxisPadding(100)
             .xAxisPadding(500)
-            .x(d3.time.scale().domain([getDate("day"), getDate()]))
+            .x(d3.time.scale().domain(getDomain()))
             .y(d3.scale.linear().domain([min, max]))
             .renderHorizontalGridLines(true)
             .renderVerticalGridLines(true)
@@ -358,6 +374,6 @@ define([
 
 
 
-    return {'renderGraph': renderGraph, 'addSeries': addSeries, 'delSeries': delSeries, 'getSeries': getSeries, 'setPeriod': setPeriod, 'getPeriod': getPeriod};
+    return {'renderGraph': renderGraph, 'addMetric': addMetric, 'delMetric': delMetric, 'getMetrics': getMetrics, 'setPeriod': setPeriod, 'getPeriod': getPeriod};
 
 });
