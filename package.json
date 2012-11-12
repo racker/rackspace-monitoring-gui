@@ -8,6 +8,7 @@
     "jade": "0.27.x",
     "connect": "2.5.x",
     "connect-mongo": "0.2.x",
-    "underscore": "1.4.x"
+    "underscore": "1.4.x",
+    "mongoose": "3.3.x"
   }
 }

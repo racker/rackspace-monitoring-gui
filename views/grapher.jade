@@ -1,7 +1,14 @@
 .container-fluid
   .row-fluid
     .span3
-      h4= "Saved Graphs"
+      .row
+        .span6
+          h4= "Graphs"
+        .span6
+          button#save-graph-button.btn.btn-primary= "Save Graph"
+      .row
+        .span12
+          table.table.table-condensed.table-hover#saved-graph-table
 
     #chart.span9
       //- span Days by Gain or Loss

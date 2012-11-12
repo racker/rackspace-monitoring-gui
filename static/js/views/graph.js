@@ -4,13 +4,17 @@ define([
   'underscore',
   'app',
   'views/views',
+  'models/models',
   'dc',
   'jqueryresize'
-], function($, Backbone, _, App, Views, dc) {
+], function($, Backbone, _, App, Views, Models, dc) {
 
     metricMap = {};
     var palette = d3.scale.category10();
     var graph, hoverDetail, axes;
+    var savedGraphListView;
+
+    var el = $('#chart');
 
     var hour = 60*60*1000;
 
@@ -176,6 +180,74 @@ define([
         }
     });
 
+    var SavedGraphView = Backbone.View.extend({
+        tagName: 'tr',
+        className: 'saved-graph-row',
+        template: _.template("<td><a class='select'><%= name %></a></td><td><a class='delete'>delete</a></td>"),
+
+        events: {'click .select': 'clickHandler',
+                 'click .delete': 'deleteHandler'},
+
+        deleteHandler: function () {
+            this.model.destroy({'wait': true});
+        },
+
+        clickHandler: function () {
+            $('.' + this.className).removeClass('success');
+            $(this.el).addClass('success');
+            window.location.hash = 'grapher/' + this.model.id;
+        },
+
+        render: function () {
+            $(this.el).addClass('clickable');
+            $(this.el).html(this.template(this.model.toJSON()));
+        }
+    });
+
+    var SavedGraphListView = Backbone.View.extend({
+        events: {},
+
+        initialize: function() {
+            this.collection.on('add', this.render.bind(this));
+            this.collection.on('remove', this.render.bind(this));
+            this.rendered = false;
+        },
+
+        render: function()
+        {
+            $(this.el).empty();
+            this.collection.each(function (graph) {
+                this.add(graph);
+            }.bind(this));
+            this.rendered = true;
+            return this;
+        },
+
+        add: function(m)
+        {
+            var e = new SavedGraphView({
+                model: m
+            });
+            e.render();
+            $(this.el).append(e.el);
+        }
+    });
+
+    var SavedGraphButton = Backbone.View.extend ({
+
+        el: $('#save-graph-button'),
+        events: {'click': 'clickHandler'},
+
+        clickHandler: function () {
+            var dummyGraph = {
+                name: 'testGraph-'+getDate().getTime(),
+                series: []
+            };
+            App.getInstance().account.graphs.create(dummyGraph, {'wait': true});
+        }
+
+    });
+
     function _populateMetricTable (check) {
         var app = App.getInstance();
         var metricListView;
@@ -241,6 +313,33 @@ define([
 
     function _getMetricKey(metric) {
         return [metric.get('entity_id'), metric.get('check_id'), metric.get('name')].join();
+    }
+
+    function _populateSavedGraphsTable() {
+
+        var app = App.getInstance();
+        var savedGraphButton;
+
+        var graph_fetch_success = function (collection, response) {
+
+            if (!savedGraphListView) {
+                savedGraphListView = new SavedGraphListView({'el': $('#saved-graph-table'), 'collection': collection});
+            }
+            if (!savedGraphListView.rendered) {
+                savedGraphListView.render();
+            }
+        };
+
+        var graph_fetch_failure = function (collection, response) {
+            $('#saved-graph-table').html('<tr><td>Failed to fetch graphs</td></tr>');
+
+        };
+
+        savedGraphButton = new SavedGraphButton();
+        savedGraphButton.render();
+
+        app.account.graphs.fetch({"success": graph_fetch_success, "error": graph_fetch_failure});
+
     }
 
     function inMetrics(metric) {
@@ -361,11 +460,12 @@ define([
 
     }
 
-    function renderGraph () {
+    function renderGraph (id) {
 
         Views.renderView('grapher');
 
         _populateEntityTable();
+        _populateSavedGraphsTable();
 
         _renderGraph();
         $("#chart").resize(_renderGraph);
