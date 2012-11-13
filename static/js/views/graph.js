@@ -311,7 +311,7 @@ define([
 
             var max = Math.max.apply(null, _.map(dataByTimestampGroup.all(), function(d){return d.value;}));
 
-            return [dc.lineChart(parentChart).dimension(dataByTimestamp).group(dataByTimestampGroup), min, max]; //.y(d3.scale.linear().domain([min, max]));
+            return [dc.lineChart(parentChart).dimension(dataByTimestamp).group(dataByTimestampGroup), min, max];
         });
     }
 
