@@ -63,11 +63,28 @@ define([
         return d.promise();
     }
 
+    var SavedGraph = Backbone.Model.extend({
+        idAttribute: "_id",
+        urlRoot: '/saved_graphs/',
+        parse: function(response) {
+            delete response.__v;
+            return response;
+        }
+    });
+
+    var AccountSavedGraphCollection = Backbone.Collection.extend({
+        model: SavedGraph,
+        url: function() {
+            return '/saved_graphs';
+        }
+    });
+
     var Account = Backbone.Model.extend({
         url: function() {
             return BASE_URL + '/account';
         },
         initialize: function() {
+            this.graphs = new AccountSavedGraphCollection([]);
             this.entities = nestCollection(this, 'entities', new AccountEntityCollection([], {account: this}));
         }
     });
@@ -291,5 +308,9 @@ define([
         return new C();
     }
 
-    return {'Account': Account, 'Entity': Entity, 'Check': Check, 'Metric': Metric};
+    return {'Account': Account,
+            'Entity': Entity,
+            'Check': Check,
+            'Metric': Metric,
+            'SavedGraph': SavedGraph};
 });

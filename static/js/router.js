@@ -15,7 +15,7 @@ define([
     router.on('route:entityDetailsRoute', function (id) {Views.renderEntityDetails(id);});
     router.on('route:checkDetailsRoute', function (id, cid) {Views.renderCheckDetails(id, cid);});
     router.on('route:alarmDetailsRoute', function (id, aid) {Views.renderAlarmDetails(id, aid);});
-    router.on('route:grapherRoute', function () {Graph.renderGraph();});
+    router.on('route:grapherRoute', function (id) {Graph.renderGraph(id);});
     router.on('route:accountRoute', function () {Views.renderAccount();});
   };
 
@@ -30,6 +30,7 @@ define([
               "entities/:id": "entityDetailsRoute",
               "entities/:id/checks/:cid": "checkDetailsRoute",
               "entities/:id/alarms/:aid": "alarmDetailsRoute",
+              "grapher/:id": "grapherRoute",
               "grapher": "grapherRoute",
               "account": "accountRoute",
               '*path':  'defaultRoute'

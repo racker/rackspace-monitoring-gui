@@ -5,6 +5,7 @@ var MongoStore = require('connect-mongo')(express);
 
 var settings = require('./settings');
 var api = require('./api');
+var graphs = require('./graphs');
 
 
 app.configure(function(){
@@ -41,8 +42,6 @@ app.configure(function(){
     next();
   });
 
-  //app.use(app.router);
-
   // views
   app.set("views", __dirname + "/views");
   app.set('view engine', 'jade');
@@ -54,14 +53,6 @@ app.configure(function(){
 // INDEX
 app.get('/', function(req, res){
     res.render('index.jade');
-});
-
-app.get('/plot', function(req, res){
-    res.render('plot.jade');
-});
-
-app.get('/plot_backbone', function(req, res){
-    res.render('plot_backbone.jade');
 });
 
 //LOGIN
@@ -120,6 +111,13 @@ app.get('/logout', function(req, res) {
   req.session.destroy();
   res.redirect('/login');
 });
+
+// SAVED GRAPHS
+app.get('/saved_graphs', graphs.getAll);
+app.post('/saved_graphs', graphs.post);
+app.get('/saved_graphs/:id', graphs.get);
+app.del('/saved_graphs/:id', graphs.del);
+app.put('/saved_graphs/:id', graphs.put);
 
 app.all(/^\/proxy(.*)/, api.proxy_request);
 
