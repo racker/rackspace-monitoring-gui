@@ -442,7 +442,7 @@ define([
 
             var max = Math.max.apply(null, _.map(dataByTimestampGroup.all(), function(d){return d.value;}));
 
-            return [dc.lineChart(parentChart).dimension(dataByTimestamp).group(dataByTimestampGroup), min, max];
+            return [dc.lineChart(parentChart).dimension(dataByTimestamp).group(dataByTimestampGroup).title(function(d) {return "Value: " + d.value; }).renderTitle(true), min, max];
         });
     }
 
@@ -471,7 +471,7 @@ define([
             return d.y;
         });
 
-        $.when.apply(this, _getCharts(chart)).done(function(){
+        return $.when.apply(this, _getCharts(chart)).done(function(){
 
             var charts = _.map(arguments, function(d){return d[0];});
 
@@ -523,19 +523,26 @@ define([
             metricMap = {};
             new Models.SavedGraph({"_id": id}).fetch({success: function(g) {
                 activeGraph = g;
-                console.log(g);
                 _.each(activeGraph.get('series'), function(s){
                     m = new Models.Metric({entity_id: s.entityId, check_id: s.checkId, name: s.metricName});
                     addMetric(m);
                 });
                 setPeriod(g.get('period'), false);
-                _renderGraph();
+                _renderGraph().then(function() {
+                    $('#chart-title').html(activeGraph.get('name'));
+                });
+
             }});
         } else {
+            metricMap = {};
             setPeriod(dates['day'].offset, false);
-            _renderGraph();
+            _renderGraph().then(function() {
+                $('#chart-title').html('Unsaved Graph');
+            });
+
         }
         $("#chart").resize(_renderGraph);
+
 
     }
 
