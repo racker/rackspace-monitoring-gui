@@ -10,7 +10,12 @@ define([
   'bootstrap'
 ], function($, Backbone, _, App, Views, Models, dc) {
 
-    metricMap = {};
+    var metricMap = {};
+    var dataMap = {};
+    var title = "";
+
+    var chart;
+
     var palette = d3.scale.category10();
     var savedGraphListView;
 
@@ -40,7 +45,10 @@ define([
 
         $target.append(
             $('<li>').append(
-                $('<a>').click(function() {setPeriod(p.offset, true);})
+                $('<a>').click(function() {
+                    setPeriod(p.offset, true);
+                    $("#daterangeselect button").html(p.text + ' <span class="caret"></span');
+                })
                 .append(p.text)
             )
 
@@ -52,7 +60,7 @@ define([
     function setPeriod(p, render) {
         period = p;
         if(render){
-            _renderGraph();
+            _renderGraph(true);
         }
     }
 
@@ -380,14 +388,14 @@ define([
     function addMetric (metric, render) {
         metricMap[_getMetricKey(metric)] = metric;
         if(render){
-            _renderGraph();
+            _renderGraph(true);
         }
     }
 
     function delMetric(metric, render) {
         delete metricMap[_getMetricKey(metric)];
         if(render){
-            _renderGraph();
+            _renderGraph(true);
         }
     }
 
@@ -404,7 +412,7 @@ define([
             delete metricMap[key];
         }
         if(render){
-            _renderGraph();
+            _renderGraph(true);
         }
     }
 
@@ -415,7 +423,7 @@ define([
             addMetric(metric);
         }
         if(render){
-            _renderGraph();
+            _renderGraph(true);
         }
     }
 
@@ -454,12 +462,24 @@ define([
         });
     }
 
-    function _renderGraph () {
+    function _renderGraph (fetch_data) {
         /* Get a list of deferreds, one for each chart to be generated, based upon asynchronous
            HTTP requests to the monitoring API. When all deferreds are done, then construct the
            composite chart and render it. */
 
-        var chart = dc.compositeChart("#chart");
+
+
+        if(!fetch_data) {
+            chart.width($('#chart-container').width());
+            dc.renderAll();
+            return;
+        }
+
+        $('#chart').fadeTo(100, 0.5);
+        $('#chart-loading').show();
+
+        // Create new chart
+        chart = dc.compositeChart("#chart");
 
         var fake = crossfilter([{x:0, y:1}]);
 
@@ -486,7 +506,7 @@ define([
             var max = Math.max.apply(null, maxs);
 
 
-            chart.width($('#chart').width())
+            chart.width($('#chart-container').width())
             .height(400)
             .transitionDuration(500)
             .margins({top: 10, right: 10, bottom: 30, left: 40})
@@ -502,6 +522,10 @@ define([
             .brushOn(false);
 
             dc.renderAll();
+
+            $('#chart-loading').hide();
+            $('#chart').fadeTo(100, 1)
+            $('#chart-title').html(title);
         });
 
     }
@@ -519,34 +543,28 @@ define([
         _populateSavedGraphsTable();
 
         // Load a saved graph if it exists
+        metricMap = {};
         if(id) {
-            metricMap = {};
             new Models.SavedGraph({"_id": id}).fetch({success: function(g) {
                 activeGraph = g;
+                title = activeGraph.get('name');
                 _.each(activeGraph.get('series'), function(s){
                     m = new Models.Metric({entity_id: s.entityId, check_id: s.checkId, name: s.metricName});
                     addMetric(m);
                 });
                 setPeriod(g.get('period'), false);
-                _renderGraph().then(function() {
-                    $('#chart-title').html(activeGraph.get('name'));
-                });
-
+                _renderGraph(true);
             }});
         } else {
-            metricMap = {};
+            title = "Unsaved Graph";
             setPeriod(dates['day'].offset, false);
-            _renderGraph().then(function() {
-                $('#chart-title').html('Unsaved Graph');
-            });
+            _renderGraph(true);
 
         }
-        $("#chart").resize(_renderGraph);
+        $("#chart-container").resize(function(){_renderGraph(false);});
 
 
     }
-
-
 
     return {'renderGraph': renderGraph, 'addMetric': addMetric, 'delMetric': delMetric, 'getMetrics': getMetrics, 'setPeriod': setPeriod, 'getPeriod': getPeriod};
 
