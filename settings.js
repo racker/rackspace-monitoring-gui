@@ -5,6 +5,11 @@ var config = {
   // listen port
   port: 3000,
 
+  log: {
+    access: __dirname + '/logs/access.log',
+    application: __dirname + '/logs/application.log'
+  },
+
   // database config
   db: {
     db: 'raxmon-gui',

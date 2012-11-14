@@ -3,51 +3,67 @@ var app = express();
 
 var MongoStore = require('connect-mongo')(express);
 
+var accesslog = require('./log').access;
+var log = require('./log').application;
+
 var settings = require('./settings');
 var api = require('./api');
 var graphs = require('./graphs');
 
-
-app.configure(function(){
-app.use(express.static(__dirname + "/static"));
-
-app.use(express.bodyParser());
-app.use(express.cookieParser());
-
-// sesh and routing
-app.use(express.session({
-  key: 'raxmon-gui',
-  secret: settings.secret,
-  store: new MongoStore(settings.db)
-}));
-
-// set some vars available in every view
-app.locals = {
-  title: "Rackspace Monitoring",
-  errors: []
+// hack for express logger
+var logStream = {
+    write: function(message, encoding){
+        accesslog.info(message);
+    }
 };
 
-// session middleware
-app.use(function(req, res, next){
+app.configure(function(){
 
-  //check for session and redirect if so
-  if (!req.session.hasOwnProperty('authToken')) {
-    if (req.url != '/login') {
-      res.redirect('/login');
+  app.use(express.static(__dirname + "/static"));
+  
+  app.use(express.bodyParser());
+  app.use(express.cookieParser());
+  
+  // sesh and routing
+  app.use(express.session({
+    key: 'raxmon-gui',
+    secret: settings.secret,
+    store: new MongoStore(settings.db)
+  }));
+  
+  // set some vars available in every view
+  app.locals = {
+    title: "Rackspace Monitoring",
+    errors: []
+  };
+  
+  // session middleware
+  app.use(function(req, res, next){
+    res.locals.session = req.session;
+    if (!req.session.hasOwnProperty('authToken')) {
+      // render login view
+      if (req.url == '/login') {
+        next();
+      // redirect to login
+      } else if (req.url == '/' || req.url == '/logout') {
+        res.redirect('/login');
+      // all other routes are XHR, 403 them
+      } else {
+        res.send(403);
+      }
+    } else {
+      next();
     }
-  }
-
-  // made session available in the response (I know.. I know..)
-  res.locals.session = req.session;
-  next();
-});
-
-// views
-app.set("views", __dirname + "/views");
-app.set('view engine', 'jade');
-app.set('view options', { layout: false,
-                          pretty: true });
-
+  });
+  
+  // logging
+  app.use(express.logger({stream: logStream}));
+  
+  // views
+  app.set("views", __dirname + "/views");
+  app.set('view engine', 'jade');
+  app.set('view options', { layout: false,
+                            pretty: true });
 });
 
 // INDEX
@@ -78,7 +94,7 @@ app.post('/login', function(req, res) {
     return;
   }
 
-  api.authenticate(opts, function(err, results) {
+  api.authenticate(req, opts, function(err, results) {
 
     if (err) {
       res.render('login.jade', {errors: [err]});
@@ -121,4 +137,5 @@ app.put('/saved_graphs/:id', graphs.put);
 
 app.all(/^\/proxy(.*)/, api.proxy_request);
 
-app.listen(3000);
+app.listen(settings.port);
+log.info('listening on port ' + settings.port);

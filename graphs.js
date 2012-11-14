@@ -2,36 +2,81 @@ var mongoose = require('mongoose');
 var settings = require('./settings');
 var _ = require('underscore');
 
+var log = require('./log').application;
+
 var db = mongoose.createConnection(settings.db.host, settings.db.db);
 
 var graphSchema = new mongoose.Schema({
-    tenantId: Number,
-    name: String,
-    period: Number,
+    tenantId: {type: Number,
+               required: true,
+               min: 1},
+    name: {type: String,
+           required: true,
+           match: (/\S+/i)}, // any non-whitespace string
+    period: {type: Number,
+             required: true,
+             max: 60*60*1000*24*365, // 1 year
+             min: 60*60*1000}, // 1 hour
     series: [{
-        entityId: String,
-        checkId: String,
-        metricName: String
+        entityId: {type: String,
+                   required: true,
+                   match: (/en[\w]+/i)}, // entity hashid - enXXXXX
+        checkId: {type: String,
+                  required: true,
+                  match: (/ch[\w]+/i)}, // check hashid -- chXXXXX
+        metricName: {type: String,
+                     required: true,
+                     match: (/\S+/i)} // metric name - any non-whitespace string
     }]
 });
+
 var SavedGraph = db.model('SavedGraph', graphSchema);
 
-var getAll = function(req, res) {
+/*
+ * log and parse an error response from mongo into something suitable to return to a client
+ */
+var handleError = function (req, res, err) {
 
-    if (req.session.tenantId) {
-        SavedGraph.find({ tenantId: req.session.tenantId }, function (err, graphs) {
-            if (err) {
-                console.log('SAVEDGRAPHS - ERROR - GET failed! DB error fetching graphs');
-                console.log(err);
-                res.status(500).send('{"code": 500, "error": "could not get graphs"}');
-            }
-            console.log('SAVEDGRAPHS - GET - Found '+graphs.length+' graphs for tenantId '+req.session.tenantId);
-            res.send(JSON.stringify(graphs));
-        });
-    } else {
-        console.log('SAVEDGRAPHS - ERROR - GET failed! no tenantId');
-        res.status(500).send('{"code": 500, "error": "could not get graphs"}');
+    log.error('SavedGraphs - Error', {username: req.session.username,
+                                      tenantId: req.session.tenantId,
+                                      url: req.url,
+                                      ip: req.ip,
+                                      error: err});
+
+    var response = {};
+    response['code'] = 500;
+    response['name'] = err.name;
+    response['message'] = 'Unknown Error';
+    response.errors = [];
+
+    if (response.name === 'ValidationError') {
+        response.code = 400;
+        response.message = err.toString();
     }
+
+    return res.send(response.code, response);
+};
+
+var getAll = function(req, res) {
+    SavedGraph.find({ tenantId: req.session.tenantId }, function (err, graphs) {
+        if (err) {
+            handleError(req, res, err);
+        }
+        log.info('SavedGraphs - GET', {username: req.session.username, tenantId: req.session.tenantId, ip: req.ip, count: graphs.length});
+        res.send(graphs);
+    });
+};
+
+var get = function(req, res) {
+    var id = req.params.id;
+
+    SavedGraph.findOne({ tenantId: req.session.tenantId, _id: id }, function (err, graph) {
+        if (err) {
+            handleError(req, res, err);
+        }
+        log.info('SavedGraphs - GET', {username: req.session.username, tenantId: req.session.tenantId, ip: req.ip, id: id});
+        res.send(graph);
+    });
 };
 
 var post = function(req, res) {
@@ -40,76 +85,38 @@ var post = function(req, res) {
     graph = new SavedGraph(data);
     graph.save(function (err, g) {
         if (err) {
-            console.log('SAVEDGRAPHS - ERROR - POST failed! DB error saving graph');
-            res.status(500).send('{"code": 500, "error": "could not save graph"}');
+            handleError(req, res, err);
         } else {
-            console.log('Saved Graph for tenantId ' + req.session.tenantId);
-            res.send(JSON.stringify(g));
+            log.info('SavedGraphs - POST', {username: req.session.username, tenantId: req.session.tenantId, ip: req.ip});
+            res.send(g);
         }
     });
 };
 
-var get = function(req, res) {
-    var id = req.params.id;
-
-    if (req.session.tenantId) {
-        SavedGraph.findOne({ tenantId: req.session.tenantId, _id: id }, function (err, graph) {
-            if (err) {
-                console.log('SAVEDGRAPHS - ERROR - GET failed! DB error fetching graphs');
-                console.log(err);
-                res.status(500).send('{"code": 500, "error": "could not get graphs"}');
-            }
-            console.log('SAVEDGRAPHS - GET - Found '+graph.length+' graphs for tenantId '+req.session.tenantId);
-            res.send(JSON.stringify(graph));
-        });
-    } else {
-        console.log('SAVEDGRAPHS - ERROR - GET failed! no tenantId');
-        res.status(500).send('{"code": 500, "error": "could not get graphs"}');
-    }
-};
-
-
 var put = function(req, res) {
-    console.log('PUT from ' + req.session.tenantId);
+    log.info('SavedGraphs - PUT', {username: req.session.username, tenantId: req.session.tenantId, ip: req.ip});
+    res.send(204);
 };
 
 var del = function(req, res) {
     var id = req.params.id;
 
-    if (!id) {
-        console.log('SAVEDGRAPHS - ERROR - DELETE failed! No document id');
-        res.status(500).send('{"code": 500, "error": "could not delete graph"}');
-    } else {
-        if (req.session.tenantId) {
-            SavedGraph.find({ tenantId: req.session.tenantId, _id: id}, function (err, graphs) {
-                if (err) {
-                    console.log('SAVEDGRAPHS - ERROR - DELETE failed! DB error fetching graphs');
-                    console.log(err);
-                    res.status(500).send('{"code": 500, "error": "could not delete graphs"}');
-                } else {
-                    if (graphs.length !== 1) {
-                        console.log('SAVEDGRAPHS - Delete skipped - found ' + graphs.length + ' graphs');
+    SavedGraph.find({ tenantId: req.session.tenantId, _id: id}, function (err, graphs) {
+        if (err) {
+            handleError(req, res, err);
+        } else {
+            _.each(graphs, function (graph) {
+                graph.remove(function (err) {
+                   if (err) {
+                        handleError(req, res, err);
+                    } else {
+                        log.info('SavedGraphs - DELETE', {username: req.session.username, tenantId: req.session.tenantId, ip: req.ip, id: id});
+                        res.send(204);
                     }
-                    _.each(graphs, function (graph) {
-                        graph.remove(function (err) {
-                           if (err) {
-                                console.log('SAVEDGRAPHS - ERROR - DELETE failed! DB error deleting graphs');
-                                console.log(err);
-                                res.status(500).send('{"code": 500, "error": "could not delete graphs"}');
-                            } else {
-                                console.log('SAVEDGRAPHS - Deleted Graph ' + id + ' for tenantId ' + req.session.tenantId);
-                                res.send('{"code": 200, "message": "ok"}');
-                            }
-                        });
-                    });
-                }
+                });
             });
         }
-        else {
-            console.log('SAVEDGRAPHS - ERROR - SavedGraph DELETE failed! no tenantId');
-            res.status(500).send('{"code": 500, "error": "could not delete graph"}');
-        }
-    }
+    });
 };
 
 module.exports = {getAll: getAll, get: get, post:post, put:put, del:del};

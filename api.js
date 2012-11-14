@@ -3,6 +3,8 @@ var request = require('./utils').request;
 var querystring = require('querystring');
 var _ = require('underscore');
 
+var log = require('./log').application;
+
 /* Get cloudMonitoring url from service catalog */
 var _get_service_url = function(service_catalog) {
 
@@ -17,7 +19,7 @@ var _get_service_url = function(service_catalog) {
 /* Authenticate against Rackspace auth and return relevant information
  * http://docs.rackspace.com/auth/api/v2.0/auth-client-devguide/content/Overview-d1e65.html
  */
-var authenticate = function(opts, callback) {
+var authenticate = function(req, opts, callback) {
 
     var body, headers, response, authResult;
 
@@ -32,24 +34,27 @@ var authenticate = function(opts, callback) {
 
     headers = {'accept': 'application/json', 'content-type': 'application/json'};
 
+    log.info('Auth - Attempt', {username: opts.username, ip: req.ip});
+
     request(opts.url, 'POST', body, headers, function (err, result) {
 
         // errors making the request?
         if (err) {
-            console.log('Request Error: ' + err);
+            log.error('Auth - Unknown Error', {username: opts.username, ip: req.ip, error: err, result: result});
             callback('There was an error with the authentication service.', null);
             return;
         }
 
         // unauthorized?
         if (result.code == 401) {
+            log.info('Auth - Failed - Invalid Credentials', {username: opts.username, ip: req.ip});
             callback('Invalid Username or Password.', null);
             return;
         }
 
         // any other unexpected status code?
         else if (result.code != 200) {
-            console.log('Unknown Response: ' + result);
+            log.error('Auth - Bad Response Code', {username: opts.username, ip: req.ip, result: result});
             callback('There was an error with the authentication service.', null);
             return;
         }
@@ -64,11 +69,11 @@ var authenticate = function(opts, callback) {
                     tenantId: response['access']['token']['tenant']['id'],
                     url: _get_service_url(response['access']['serviceCatalog'])
                 };
+                log.info('Auth - Success', {username: opts.username, ip: req.ip});
                 callback(null, authResult);
            }
            catch (e) {
-                console.log('Something broke parsing an auth response');
-                console.log('Exception: ' + e);
+                log.error('Auth - Could Not Parse Response', {username: opts.username, ip: req.ip, error: e, result: result});
                 callback('There was an error with the authentication service.' + result, null);
             }
         }
@@ -77,19 +82,20 @@ var authenticate = function(opts, callback) {
 
 var proxy_request = function(req, res) {
     var headers = {'X-Auth-Token': req.session.authToken,
-               'Accept': 'application/json',
-               'Content-Type': 'application/json'};
+                   'Accept': 'application/json',
+                   'Content-Type': 'application/json'};
 
     var url = req.session.url + req.params[0];
     if (!_.isEmpty(req.query)) {
         url += '?' + querystring.stringify(req.query);
     }
-    console.log('Proxy: ' + url);
+    var startTime = (new Date()).getTime();
     request(req.session.url + req.params[0] + '?' + querystring.stringify(req.query), req.route.method.toUpperCase(), JSON.stringify(req.body), headers, function(err, result) {
         if (err) {
-            console.log('Request Error: ' + err);
+            log.error('Proxy - Error', {url: url, time: ((new Date()).getTime() - startTime)+'ms', username: req.session.username, tenantId: req.session.tenantId, ip: req.ip, error: error, result: result});
             res.send(500, 'Request Error');
         } else {
+            log.info('Proxy - Request', {url: url, code: result.code, time: ((new Date()).getTime() - startTime)+'ms', username: req.session.username, tenantId: req.session.tenantId, ip: req.ip});
             res.set(result.headers).send(result.code, result.body);
         }
     });

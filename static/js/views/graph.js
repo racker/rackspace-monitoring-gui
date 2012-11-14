@@ -262,18 +262,49 @@ define([
         }
     });
 
-    var SavedGraphButton = Backbone.View.extend ({
+    var SaveGraphButton = Backbone.View.extend ({
 
         el: $('#save-graph-button'),
         events: {'click': 'clickHandler'},
 
+        saveSuccess: function (collection, graph) {
+            $('#save-graph-modal').modal('hide');
+        },
+
+        saveError: function (graph, response) {
+
+            try {
+                r = JSON.parse(response.responseText);
+            } catch (e) {
+                r = {'name': 'UnknownError', 'message': 'UnknownError: An unknown error occured.'};
+            }
+
+            $('#graph-name-input-error').empty();
+            $('#graph-name-input-control-group').addClass('error');
+            $('#graph-name-input-error').html(r.message);
+        },
+
         clickHandler: function () {
-            var dummyGraph = {
-                name: 'testGraph-'+getDate().getTime(),
+            var name = $('#graph-name-input').val();
+            var graph = {
+                name: name,
                 period: getPeriod(),
                 series: dumpMetrics()
             };
-            App.getInstance().account.graphs.create(dummyGraph, {'wait': true});
+            App.getInstance().account.graphs.create(graph, {success: this.saveSuccess.bind(this),
+                                                            error: this.saveError.bind(this),
+                                                            'wait': true});
+        }
+
+    });
+
+    var ShowSaveGraphModalButton = Backbone.View.extend ({
+
+        el: $('#show-save-graph-modal-button'),
+        events: {'click': 'clickHandler'},
+
+        clickHandler: function () {
+            $('#save-graph-modal').modal('show');
         }
 
     });
@@ -348,7 +379,7 @@ define([
     function _populateSavedGraphsTable() {
 
         var app = App.getInstance();
-        var savedGraphButton;
+        var saveGraphButton, showSaveGraphModalButton;
 
         var graph_fetch_success = function (collection, response) {
 
@@ -365,8 +396,8 @@ define([
 
         };
 
-        savedGraphButton = new SavedGraphButton();
-        savedGraphButton.render();
+        saveGraphButton = new SaveGraphButton();
+        showSaveGraphModalButton = new ShowSaveGraphModalButton();
 
         app.account.graphs.fetch({"success": graph_fetch_success, "error": graph_fetch_failure});
 
@@ -524,7 +555,7 @@ define([
             dc.renderAll();
 
             $('#chart-loading').hide();
-            $('#chart').fadeTo(100, 1)
+            $('#chart').fadeTo(100, 1);
             $('#chart-title').html(title);
         });
 
