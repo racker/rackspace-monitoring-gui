@@ -25,8 +25,11 @@ define([
         "hour": {text: "Last hour", offset: hour, dateformat: "%l:%M"},
         "6hour": {text: "Last 3 hours", offset: 3*hour, dateformat: "%l:%M"},
         "day": {text: "Last day", offset: 24*hour, dateformat: "%l:%M"},
+        "3day": {text: "Last 3 days", offset: 3*24*hour, dateformat: "%l:%M"},
         "week": {text: "Last week", offset: 7*24*hour},
+        "2week": {text: "Last 2 weeks", offset: 2*7*24*hour},
         "month": {text: "Last month", offset: 30*24*hour},
+        "3month": {text: "Last 3 months", offset: 91*24*hour},
         "6month": {text: "Last 6 months", offset: 182*24*hour},
         "year": {text: "Last year", offset: 365*24*hour}
 
@@ -416,13 +419,13 @@ define([
         }
     }
 
-    function _getRecentData(metric, options) {
-        return metric.getRecentData(getPeriod(), 100, options);
+    function _getData(metric, now, options) {
+        return metric.getData(now - getPeriod(), now, 500, options);
     }
 
     /* Fetch */
-    function _getChart(metric, parentChart) {
-        return _getRecentData(metric).then(function(response) {
+    function _getChart(metric, parentChart, now) {
+        return _getData(metric, now).then(function(response) {
             var data = crossfilter(response);
 
             /* Create a timestamp dimension for this data */
@@ -445,8 +448,9 @@ define([
 
     /* Return a list of charts, one for each metric, that are suitable to constuct a compound chart for graphing */
     function _getCharts(parentChart) {
+        var now = getDate().getTime();
         return _.map(getMetrics(), function(m){
-            return _getChart(m, parentChart);
+            return _getChart(m, parentChart, now);
         });
     }
 
