@@ -9,44 +9,44 @@ var graphs = require('./graphs');
 
 
 app.configure(function(){
-  app.use(express.static(__dirname + "/static"));
+app.use(express.static(__dirname + "/static"));
 
-  app.use(express.bodyParser());
-  app.use(express.cookieParser());
+app.use(express.bodyParser());
+app.use(express.cookieParser());
 
-  // sesh and routing
-  app.use(express.session({
-    key: 'raxmon-gui',
-    secret: settings.secret,
-    store: new MongoStore(settings.db)
-  }));
+// sesh and routing
+app.use(express.session({
+  key: 'raxmon-gui',
+  secret: settings.secret,
+  store: new MongoStore(settings.db)
+}));
 
-  // set some vars available in every view
-  app.locals = {
-    title: "Rackspace Monitoring",
-    errors: []
-  };
+// set some vars available in every view
+app.locals = {
+  title: "Rackspace Monitoring",
+  errors: []
+};
 
-  // session middleware
-  app.use(function(req, res, next){
+// session middleware
+app.use(function(req, res, next){
 
-    //check for session and redirect if so
-    if (!req.session.hasOwnProperty('authToken')) {
-      if (req.url != '/login') {
-        res.redirect('/login');
-      }
+  //check for session and redirect if so
+  if (!req.session.hasOwnProperty('authToken')) {
+    if (req.url != '/login') {
+      res.redirect('/login');
     }
+  }
 
-    // made session available in the response (I know.. I know..)
-    res.locals.session = req.session;
-    next();
-  });
+  // made session available in the response (I know.. I know..)
+  res.locals.session = req.session;
+  next();
+});
 
-  // views
-  app.set("views", __dirname + "/views");
-  app.set('view engine', 'jade');
-  app.set('view options', { layout: false,
-                            pretty: true });
+// views
+app.set("views", __dirname + "/views");
+app.set('view engine', 'jade');
+app.set('view options', { layout: false,
+                          pretty: true });
 
 });
 
