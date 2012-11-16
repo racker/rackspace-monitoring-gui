@@ -483,20 +483,20 @@ define([
 
             /* Create a timestamp dimension for this data */
             var countByBin = data.dimension(function(d){
-                return Math.floor(d.average*100)/100;
+                return Math.floor(d.average*1000);
             });
 
             /* For each timestamp, the "group" is the average */
-            var countBinGroup = countByBin.group().reduceCount();
+            var countByBinGroup = countByBin.group().reduceCount();
 
-            var min_bin = Math.min.apply(null, _.map(countBinGroup.all(), function(d){return d.value;}));
+            var min_bin = Math.min.apply(null, _.map(countByBinGroup.all(), function(d){return d.value;}));
 
-            var max_bin = Math.max.apply(null, _.map(countBinGroup.all(), function(d){return d.value;}));
+            var max_bin = Math.max.apply(null, _.map(countByBinGroup.all(), function(d){return d.value;}));
 
 
-            time_chart = dc.lineChart(parentTimeChart).dimension(dataByTimestamp).group(dataByTimestampGroup);
+            var time_chart = dc.lineChart(parentTimeChart).dimension(dataByTimestamp).group(dataByTimestampGroup);
 
-            histogram = dc.barChart(parentHistogram).dimension(countByBin).group(countBinGroup);
+            var histogram = dc.barChart(parentHistogram).dimension(countByBin).group(countByBinGroup);
 
             return {'time_chart': time_chart,
                     'min': min,
@@ -522,11 +522,9 @@ define([
            HTTP requests to the monitoring API. When all deferreds are done, then construct the
            composite chart and render it. */
 
-
-
         if(!fetch_data) {
-            chart.width($('#chart-container').width());
-            dc.renderAll();
+            //chart.width($('#chart-container').width());
+            //dc.renderAll();
             return;
         }
 
@@ -534,9 +532,9 @@ define([
         $('#chart-loading').show();
 
         // Create new chart
-        time_chart = dc.compositeChart("#time_chart");
+        var time_chart = dc.compositeChart("#time_chart");
 
-        histogram = dc.compositeChart("#histogram");
+        var histogram = dc.compositeChart("#histogram");
 
         var fake = crossfilter([{x:0, y:1}]);
 
@@ -564,7 +562,6 @@ define([
             maxs.push(0);
             var max = Math.max.apply(null, maxs);
 
-
             var min_bin = 0;
 
             // Perform some math to find the max for the y axis
@@ -582,7 +579,7 @@ define([
                     .yAxisPadding(100)
                     .xAxisPadding(500)
                     .x(d3.time.scale().domain(getDomain()))
-                    .y(d3.scale.linear().domain([0,1])) //[min, max*1.25]))
+                    .y(d3.scale.linear().domain([min, max*1.25]))
                     .renderHorizontalGridLines(true)
                     .renderVerticalGridLines(true)
                     .compose(time_charts) // Use magic arguments "array" containind all of the constructed charts
@@ -596,12 +593,16 @@ define([
                     .group(fakeGroup)
                     .yAxisPadding(100)
                     .xAxisPadding(500)
-                    .x(d3.scale.linear().domain([min, max]))
+                    .x(d3.scale.linear().domain([0, Math.ceil(max*1000)])) //.elasticX(true)
                     .y(d3.scale.linear().domain([min_bin, max_bin]))
+                    //.elasticY(true)
                     .renderHorizontalGridLines(true)
                     .renderVerticalGridLines(true)
                     .compose(histograms) // Use magic arguments "array" containind all of the constructed charts
                     .brushOn(false);
+            histogram.xAxis().tickFormat(function(v) {
+                return v/1000;
+            });
 
             dc.renderAll();
 
