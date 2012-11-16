@@ -463,7 +463,7 @@ define([
     }
 
     /* Fetch */
-    function _getChart(metric, parentChart, now) {
+    function _getChart(metric, parentTimeChart, parentHistogram, now) {
         return _getData(metric, now).then(function(response) {
             var data = crossfilter(response);
 
@@ -481,15 +481,39 @@ define([
 
             var max = Math.max.apply(null, _.map(dataByTimestampGroup.all(), function(d){return d.value;}));
 
-            return [dc.lineChart(parentChart).dimension(dataByTimestamp).group(dataByTimestampGroup).title(function(d) {return "Value: " + d.value; }).renderTitle(true), min, max];
+            /* Create a timestamp dimension for this data */
+            var countByBin = data.dimension(function(d){
+                return Math.floor(d.average*100)/100;
+            });
+
+            /* For each timestamp, the "group" is the average */
+            var countBinGroup = countByBin.group().reduceCount();
+
+            var min_bin = Math.min.apply(null, _.map(countBinGroup.all(), function(d){return d.value;}));
+
+            var max_bin = Math.max.apply(null, _.map(countBinGroup.all(), function(d){return d.value;}));
+
+
+            time_chart = dc.lineChart(parentTimeChart).dimension(dataByTimestamp).group(dataByTimestampGroup);
+
+            histogram = dc.barChart(parentHistogram).dimension(countByBin).group(countBinGroup);
+
+            return {'time_chart': time_chart,
+                    'min': min,
+                    'max': max,
+                    'histogram': histogram,
+                    'max_bin': max_bin,
+                    'min_bin': min_bin
+                };
         });
     }
 
+
     /* Return a list of charts, one for each metric, that are suitable to constuct a compound chart for graphing */
-    function _getCharts(parentChart) {
+    function _getCharts(parentTimeChart, parentHistogram) {
         var now = getDate().getTime();
         return _.map(getMetrics(), function(m){
-            return _getChart(m, parentChart, now);
+            return _getChart(m, parentTimeChart, parentHistogram, now);
         });
     }
 
@@ -510,7 +534,9 @@ define([
         $('#chart-loading').show();
 
         // Create new chart
-        chart = dc.compositeChart("#chart");
+        time_chart = dc.compositeChart("#time_chart");
+
+        histogram = dc.compositeChart("#histogram");
 
         var fake = crossfilter([{x:0, y:1}]);
 
@@ -522,35 +548,60 @@ define([
             return d.y;
         });
 
-        return $.when.apply(this, _getCharts(chart)).done(function(){
+        return $.when.apply(this, _getCharts(time_chart, histogram)).done(function(){
 
-            var charts = _.map(arguments, function(d){return d[0];});
+            var time_charts = _.map(arguments, function(d){return d.time_chart;});
+
+            var histograms = _.map(arguments, function(d){return d.histogram;});
 
             // Perform some math to find the min for the y axis
-            var mins = _.map(arguments, function(d){return d[1];});
+            var mins = _.map(arguments, function(d){return d.min;});
             mins.push(0);
             var min = Math.min.apply(null, mins);
 
             // Perform some math to find the max for the y axis
-            var maxs = _.map(arguments, function(d){return d[2];});
+            var maxs = _.map(arguments, function(d){return d.max;});
             maxs.push(0);
             var max = Math.max.apply(null, maxs);
 
 
-            chart.width($('#chart-container').width())
-            .height(400)
-            .transitionDuration(500)
-            .margins({top: 10, right: 10, bottom: 30, left: 40})
-            .dimension(fakeDimension)
-            .group(fakeGroup)
-            .yAxisPadding(100)
-            .xAxisPadding(500)
-            .x(d3.time.scale().domain(getDomain()))
-            .y(d3.scale.linear().domain([min, max*1.25]))
-            .renderHorizontalGridLines(true)
-            .renderVerticalGridLines(true)
-            .compose(charts) // Use magic arguments "array" containind all of the constructed charts
-            .brushOn(false);
+            var min_bin = 0;
+
+            // Perform some math to find the max for the y axis
+            var maxs_bin = _.map(arguments, function(d){return d.max_bin;});
+            maxs_bin.push(0);
+            var max_bin = Math.max.apply(null, maxs_bin);
+
+
+            time_chart.width($('#chart-container').width())
+                    .height(400)
+                    .transitionDuration(500)
+                    .margins({top: 10, right: 10, bottom: 30, left: 40})
+                    .dimension(fakeDimension)
+                    .group(fakeGroup)
+                    .yAxisPadding(100)
+                    .xAxisPadding(500)
+                    .x(d3.time.scale().domain(getDomain()))
+                    .y(d3.scale.linear().domain([0,1])) //[min, max*1.25]))
+                    .renderHorizontalGridLines(true)
+                    .renderVerticalGridLines(true)
+                    .compose(time_charts) // Use magic arguments "array" containind all of the constructed charts
+                    .brushOn(false);
+
+            histogram.width($('#chart-container').width())
+                    .height(400)
+                    .transitionDuration(500)
+                    .margins({top: 10, right: 10, bottom: 30, left: 40})
+                    .dimension(fakeDimension)
+                    .group(fakeGroup)
+                    .yAxisPadding(100)
+                    .xAxisPadding(500)
+                    .x(d3.scale.linear().domain([min, max]))
+                    .y(d3.scale.linear().domain([min_bin, max_bin]))
+                    .renderHorizontalGridLines(true)
+                    .renderVerticalGridLines(true)
+                    .compose(histograms) // Use magic arguments "array" containind all of the constructed charts
+                    .brushOn(false);
 
             dc.renderAll();
 
@@ -558,6 +609,8 @@ define([
             $('#chart').fadeTo(100, 1);
             $('#chart-title').html(title);
         });
+
+
 
     }
 
