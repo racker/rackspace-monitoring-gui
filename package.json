@@ -2,6 +2,24 @@
   "name": "rackspace-monitoring-gui",
   "description": "webapp for rackspace monitoring",
   "version": "0.0.1",
+  "author": {
+    "name": "Rackspace US, Inc."
+  },
+  "contributors": [
+    "Brad Morgan <bradley.morgan@rackspace.com>",
+    "Alex Weeks <alex.weeks@rackspace.com>"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/racker/rackspace-monitoring-gui.git"
+  },
+  "licenses": [
+    {
+      "type": "Apache",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+    }
+  ],
+  "bin": "./bin/raxmongui",
   "private": true,
   "dependencies": {
     "express": "3.x",
