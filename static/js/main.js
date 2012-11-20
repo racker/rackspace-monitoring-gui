@@ -56,7 +56,7 @@ define([
   var initialize = function (account, callback) {
 
     var error = function (model, response) {
-      Views.errorView();
+      Views.renderError();
     };
 
     var entities_fetch_success = function (model, response) {

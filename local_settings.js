@@ -1,14 +1,9 @@
 var config = {
 
-  authUrl: 'https://identity.api.rackspacecloud.com/v2.0/tokens',
+  authUrl: 'https://identity.api.rackspacecloud.com/v2.0',
 
-  // listen port
-  port: 3000,
-
-  log: {
-    access: __dirname + '/logs/access.log',
-    application: __dirname + '/logs/application.log'
-  },
+  // listen port (overidden by command-line)
+  listen_port: 3000,
 
   // database config
   db: {
