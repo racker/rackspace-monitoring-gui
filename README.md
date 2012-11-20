@@ -15,9 +15,9 @@ setup
 tests
 =====
 1. npm install --dev
-2. npm test
+2. npm run-script test
 
 jslint
 ======
 1. npm install --dev
-2. npm jslint
+2. npm run-script lint

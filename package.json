@@ -15,5 +15,12 @@
     "logmagic": "0.1.4",
     "optimist": "0.3.x",
     "async": "0.1.x"
+  },
+  "devDependencies": {
+    "jshint" : "0.9.x"
+  }, 
+  "scripts": {
+    "lint": "./scripts/lint.sh",
+    "test": "./scripts/test.sh"
   }
 }
