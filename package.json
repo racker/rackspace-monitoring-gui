@@ -35,7 +35,10 @@
     "async": "0.1.x"
   },
   "devDependencies": {
-    "jshint" : "0.9.x"
+    "jshint": "0.9.x",
+    "requirejs": "2.1.x",
+    "jasmine-node": "1.0.x",
+    "jsdom": "0.2.19" 
   }, 
   "scripts": {
     "lint": "./scripts/lint.sh",

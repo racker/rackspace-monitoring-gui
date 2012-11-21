@@ -20,7 +20,9 @@ define([
 
     var AlarmView = Backbone.View.extend({
         tagName: 'tr',
-        template: _.template("<tr><td><a href='#entities/<%= entity_id %>/alarms/<%= id %>'> <%= id %> </a> </td></tr>"),
+        template: _.template(
+            "<tr><td><a href='#entities/<%= entity_id %>/alarms/<%= id %>'> <%= id %> </a> </td></tr>"
+        ),
 
         events: {},
 
@@ -59,7 +61,11 @@ define([
     var AlarmDetailsView = Backbone.View.extend({
         el: $('#alarm-details'),
         tagName: 'div',
-        template: _.template($("#alarm-details-template").html()),
+        template: _.template(
+            "<tr><td><strong>id</strong></td><td><%= id %></td></tr>" +
+            "<tr><td><strong>label</strong></td><td><%= label %></td></tr>" +
+            "<tr><td><strong>criteria</strong></td><td><%= criteria %></td></tr>"
+        ),
 
         render: function () {
             // render entity details
@@ -72,7 +78,10 @@ define([
     var CheckDetailsView = Backbone.View.extend({
         el: $('#check-details'),
         tagName: 'div',
-        template: _.template($("#check-details-template").html()),
+        template: _.template(
+            "<tr><td><strong>id</strong></td><td><%= id %></td></tr>" +
+            "<tr><td><strong>label</strong></td><td><%= label %></td></tr>"
+        ),
 
         renderAlarmListSuccess: function (alarms, response) {
             var alv = new AlarmListView();
@@ -140,7 +149,34 @@ define([
     var EntityDetailsView = Backbone.View.extend({
         el: $('#entity-details'),
         tagName: 'div',
-        template: _.template($("#entity-details-template").html()),
+        template: _.template(
+            "<tr><td><strong>id</strong></td><td><%= id %></td></tr>" +
+            "<tr><td><strong>label</strong></td><td><%= label %></td></tr>" +
+            "<tr><td><strong>agent id</strong></td><td><%= agent_id %></td></tr>" +
+            "<tr><td><strong>created at</strong></td><td><%= created_at %></td></tr>" +
+            "<tr>" +
+            "<td><strong>ip addresses</strong></td>" +
+            "<td>" +
+                "<dl>" +
+                    "<% _.each(ip_addresses, function(ip, label) { %>" +
+                        "<dt><strong><%= label %></strong></dt>" +
+                        "<dd><%= ip %></dd>" +
+                    "<% }); %>" +
+                "</dl>" +
+            "</tr>" +
+            "<tr>" +
+                "<td><strong>metadata</strong></td>" +
+                "<td>" +
+                    "<dl>" +
+                        "<% _.each(metadata, function(value, key) { %>" +
+                            "<dt><strong><%= key %></strong></dt>" +
+                            "<dd><%= value %></dd>" +
+                        "<% }); %>" +
+                    "</dl>" +
+            "</tr>" +
+            "<tr><td><strong>managed</strong></td><td><%= managed %></td></tr>" +
+            "<tr><td><strong>uri</strong></td><td><%= uri %></td></tr>"
+        ),
 
         renderCheckListSuccess: function (checks, response) {
             var clv = new CheckListView();
