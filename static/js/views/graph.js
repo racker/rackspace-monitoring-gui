@@ -19,74 +19,7 @@ define([
     var palette = d3.scale.category10();
     var savedGraphListView;
 
-    var activeGraph;
-
-
-    var el = $('#chart');
-
-    var hour = 60*60*1000;
-
-    var dates = {
-        "hour": {text: "Last hour", offset: hour, dateformat: "%l:%M"},
-        "6hour": {text: "Last 3 hours", offset: 3*hour, dateformat: "%l:%M"},
-        "day": {text: "Last day", offset: 24*hour, dateformat: "%l:%M"},
-        "3day": {text: "Last 3 days", offset: 3*24*hour, dateformat: "%l:%M"},
-        "week": {text: "Last week", offset: 7*24*hour},
-        "2week": {text: "Last 2 weeks", offset: 2*7*24*hour},
-        "month": {text: "Last month", offset: 30*24*hour},
-        "3month": {text: "Last 3 months", offset: 91*24*hour},
-        "6month": {text: "Last 6 months", offset: 182*24*hour},
-        "year": {text: "Last year", offset: 365*24*hour}
-
-    };
-
-    _.each(dates, function(p) {
-        $target = $("#daterangeselect > ul");
-
-        $target.append(
-            $('<li>').append(
-                $('<a>').click(function() {
-                    setPeriod(p.offset, true);
-                    $("#daterangeselect button").html(p.text + ' <span class="caret"></span');
-                })
-                .append(p.text)
-            )
-
-        );
-    });
-
-    var period = dates["day"].offset;
-
-    function setPeriod(p, render) {
-        period = p;
-        if(render){
-            _renderGraph(true);
-        }
-    }
-
-    function getPeriod() {
-        return period;
-    }
-
-    /*
-     * returns a Date() object
-     * offset - a key in the 'dates' object or 'now'
-     */
-    function getDate(offset) {
-
-        var now = new Date();
-
-        if (!offset) {
-            return now;
-        } else {
-            var now_ms = now.getTime();
-            return new Date(now_ms - offset);
-        }
-    }
-
-    function getDomain() {
-        return [getDate(getPeriod()), getDate()];
-    }
+    var plotView;
 
     var EntityView = Backbone.View.extend({
         tagName: 'tr',
@@ -235,36 +168,142 @@ define([
 
     var SavedGraphPlotView = Backbone.View.extend({
 
-        el: '#chart-container',
-        loading_el: '#chart-loading',
-        chart_el: '#chart',
-        title_el: '#chart-title',
-        period_el: '#daterangeselect',
         metrics: {},
         data: {},
         period: 0,
 
         initialize: function() {
-            this.chart = dc.compositeChart(this.chart_el);
-            this.bind(this.model);
+            this.$loading_el = $('<img>')
+                                    .addClass('chart-spinner')
+                                    .attr('src', '/images/loading_spinner.gif');
+            this.$el.append(this.$loading_el);
+
+            this.$title_el = $('<h4>').addClass('chart-title');
+            this.$el.append(this.$title_el);
+
+            this.chart_id = "chart-" + this.model.id;
+            this.$chart_el = $('<div>').attr('id', this.chart_id);
+            this.$el.append(this.$chart_el);
+
+            this.$period_el = $('<div>')
+                                    .addClass('btn-group pull-right')
+                                    .append(
+                                        $('<button>')
+                                            .addClass('btn dropdown-toggle')
+                                            .attr('data-toggle', 'dropdown')
+                                            .append(
+                                                "Last day",
+                                                $('<span>')
+                                                    .addClass('caret')
+                                            ),
+                                        $('<ul>')
+                                            .addClass('dropdown-menu'));
+            this.$el.append(this.$period_el);
+
+            this.chart = this._constructChart();
+
+            var hour = 60*60*1000;
+
+            this.dates = {
+                "hour": {text: "Last hour", offset: hour, dateformat: "%l:%M"},
+                "6hour": {text: "Last 3 hours", offset: 3*hour, dateformat: "%l:%M"},
+                "day": {text: "Last day", offset: 24*hour, dateformat: "%l:%M"},
+                "3day": {text: "Last 3 days", offset: 3*24*hour, dateformat: "%l:%M"},
+                "week": {text: "Last week", offset: 7*24*hour},
+                "2week": {text: "Last 2 weeks", offset: 2*7*24*hour},
+                "month": {text: "Last month", offset: 30*24*hour},
+                "3month": {text: "Last 3 months", offset: 91*24*hour},
+                "6month": {text: "Last 6 months", offset: 182*24*hour},
+                "year": {text: "Last year", offset: 365*24*hour}
+            },
+
+            _.each(this.dates, function(p) {
+                    $target = this.$period_el.children("ul");
+
+                    $target.append(
+                        $('<li>').append(
+                            $('<a>').click(function() {
+                                this.setPeriod(p.offset, true);
+                                this.$period_el.children('button').html(p.text + ' <span class="caret"></span');
+                            })
+                            .append(p.text)
+                        )
+
+                    );
+                }, this);
+            this.setPeriod(this.dates['day'].offset, true);
         },
 
         bind: function(savedgraph) {
             this.model.off('change', this.render);
-            this.model = savedgraph;
             this.model.on('change', this.render);
+        },
+
+        setPeriod: function(p, no_refresh) {
+            this.period = p;
+            this.render(no_refresh);
+        },
+
+        getPeriod: function() {
+            return this.period;
+        },
+
+        /*
+         * returns a Date() object
+         * offset - a key in the 'dates' object or 'now'
+         */
+        _getDate: function(offset) {
+
+            var now = new Date();
+
+            if (!offset) {
+                return now;
+            } else {
+                var now_ms = now.getTime();
+                return new Date(now_ms - offset);
+            }
+        },
+
+        _getDomain: function() {
+            return [this._getDate(this.getPeriod()), this._getDate()];
+        },
+
+        _constructChart: function() {
+            var fake = crossfilter([{x:0, y:1}]);
+
+            var fakeDimension = fake.dimension(function(d){
+                return d.x;
+            });
+
+            var fakeGroup = fakeDimension.group().reduceSum(function(d){
+                return d.y;
+            });
+
+            var chart = dc.compositeChart("#" + this.chart_id, this.chart_id);
+            chart.width($(this.el).width())
+                .height(400)
+                .transitionDuration(500)
+                .margins({top: 10, right: 10, bottom: 30, left: 40})
+                .dimension(fakeDimension)
+                .group(fakeGroup)
+                .yAxisPadding(100)
+                .xAxisPadding(500)
+                .x(d3.time.scale().domain(this._getDomain()))
+                // .y(d3.scale.linear().domain([0, 1]))
+                .renderHorizontalGridLines(true)
+                .renderVerticalGridLines(true)
+                // .compose(charts) // Use magic arguments "array" containind all of the constructed charts
+                .brushOn(false);
+
+            return chart;
         },
 
         _getMetricKey: function(metric) {
             return [metric.get('entity_id'), metric.get('check_id'), metric.get('name')].join();
         },
 
-        _getMetric: function(entity_id, check_id, metric_name) {
-
-        },
-
         _getMetrics: function() {
-            return _.map(this.metrics.series, function(s) {
+            return _.map(this.model.get('series'), function(s) {
                 return new Models.Metric({entity_id: s.entityId, check_id: s.checkId, name: s.metricName});
             });
         },
@@ -272,7 +311,7 @@ define([
         /* Asynchronously fetch the data for a metric.  Returns a deferred that will
            be resolved with the fetched data */
         _getMetricData: function(metric, now) {
-            return metric.getData(now - getPeriod(), now, 500);
+            return metric.getData(now - this.getPeriod(), now, 500);
         },
 
         /* Refresh the data for the given metric, storing it into this.data.
@@ -297,7 +336,7 @@ define([
 
         /* Fetch */
         _getChart: function(metric, parentChart, now) {
-            return _getData(metric, now).then(function(response) {
+            return this._getMetricData(metric, now).then(function(response) {
                 var data = crossfilter(response);
 
                 /* Create a timestamp dimension for this data */
@@ -320,10 +359,10 @@ define([
 
         /* Return a list of charts, one for each metric, that are suitable to constuct a compound chart for graphing */
         _getCharts: function(parentChart) {
-            var now = getDate().getTime();
-            return _.map(getMetrics(), function(m){
-                return _getChart(m, parentChart, now);
-            });
+            var now = this._getDate().getTime();
+            return _.map(this._getMetrics(), function(m){
+                return this._getChart.bind(this)(m, parentChart, now);
+            }, this);
         },
 
         /* Get a list of deferreds, one for each chart to be generated, based upon asynchronous
@@ -332,28 +371,15 @@ define([
         render: function(no_refresh) {
 
             if(no_refresh) {
-                chart.width($('#chart-container').width());
-                dc.renderAll();
+                this.chart.width($(this.el).width());
+                dc.renderAll(this.chart_id);
                 return;
             }
 
-            $(this.chart_el).fadeTo(300, 0.1);
-            $(this.loading_el).show();
+            this.$chart_el.fadeTo(300, 0.1);
+            this.$loading_el.show();
 
-            // Create new chart
-            chart = dc.compositeChart("#chart");
-
-            var fake = crossfilter([{x:0, y:1}]);
-
-            var fakeDimension = fake.dimension(function(d){
-                return d.x;
-            });
-
-            var fakeGroup = fakeDimension.group().reduceSum(function(d){
-                return d.y;
-            });
-
-            return $.when.apply(this, _getCharts(chart)).done(function(){
+            return $.when.apply(this, this._getCharts(this.chart)).done(function(){
 
                 var charts = _.map(arguments, function(d){return d[0];});
 
@@ -368,27 +394,16 @@ define([
                 var max = Math.max.apply(null, maxs);
 
 
-                chart.width($('#chart-container').width())
-                .height(400)
-                .transitionDuration(500)
-                .margins({top: 10, right: 10, bottom: 30, left: 40})
-                .dimension(fakeDimension)
-                .group(fakeGroup)
-                .yAxisPadding(100)
-                .xAxisPadding(500)
-                .x(d3.time.scale().domain(getDomain()))
-                .y(d3.scale.linear().domain([min, max*1.25]))
-                .renderHorizontalGridLines(true)
-                .renderVerticalGridLines(true)
-                .compose(charts) // Use magic arguments "array" containind all of the constructed charts
-                .brushOn(false);
+                this.chart.x(d3.time.scale().domain(this._getDomain()))
+                        .y(d3.scale.linear().domain([min, max*1.25]))
+                        .compose(charts); // Use magic arguments "array" containind all of the constructed charts
 
-                dc.renderAll();
+                dc.renderAll(this.chart_id);
 
-                $('#chart-loading').hide();
-                $('#chart').fadeTo(100, 1);
-                $('#chart-title').html(title);
-            });
+                this.$loading_el.hide();
+                this.$chart_el.fadeTo(100, 1);
+                this.$title_el.html(title);
+            }.bind(this));
 
 
         }
@@ -565,167 +580,6 @@ define([
 
     }
 
-    function dumpMetrics() {
-        series = [];
-        for(var key in metricMap) {
-            m = metricMap[key];
-            series.push({entityId: m.get('entity_id'), checkId: m.get('check_id'), metricName: m.get('name')});
-        }
-        return series;
-    }
-
-    function inMetrics(metric) {
-        return _getMetricKey(metric) in metricMap;
-    }
-
-    function addMetric (metric, render) {
-        metricMap[_getMetricKey(metric)] = metric;
-        if(render){
-            _renderGraph(true);
-        }
-    }
-
-    function delMetric(metric, render) {
-        delete metricMap[_getMetricKey(metric)];
-        if(render){
-            _renderGraph(true);
-        }
-    }
-
-    function getMetrics() {
-        var metrics = [];
-        for(var key in metricMap) {
-            metrics.push(metricMap[key]);
-        }
-        return metrics;
-    }
-
-    function resetMetrics(render) {
-        for(var key in metricMap) {
-            delete metricMap[key];
-        }
-        if(render){
-            _renderGraph(true);
-        }
-    }
-
-    function toggleMetric(metric, render) {
-        if(inMetrics(metric)) {
-            delMetric(metric);
-        } else {
-            addMetric(metric);
-        }
-        if(render){
-            _renderGraph(true);
-        }
-    }
-
-    function _getData(metric, now, options) {
-        return metric.getData(now - getPeriod(), now, 500, options);
-    }
-
-    /* Fetch */
-    function _getChart(metric, parentChart, now) {
-        return _getData(metric, now).then(function(response) {
-            var data = crossfilter(response);
-
-            /* Create a timestamp dimension for this data */
-            var dataByTimestamp = data.dimension(function(d){
-                return d.timestamp;
-            });
-
-            /* For each timestamp, the "group" is the average */
-            var dataByTimestampGroup = dataByTimestamp.group().reduceSum(function(d) {
-                return d.average;
-            });
-
-            var min = Math.min.apply(null, _.map(dataByTimestampGroup.all(), function(d){return d.value;}));
-
-            var max = Math.max.apply(null, _.map(dataByTimestampGroup.all(), function(d){return d.value;}));
-
-            return [dc.lineChart(parentChart).dimension(dataByTimestamp).group(dataByTimestampGroup).title(function(d) {return "Value: " + d.value; }).renderTitle(true), min, max];
-        });
-    }
-
-    /* Return a list of charts, one for each metric, that are suitable to constuct a compound chart for graphing */
-    function _getCharts(parentChart) {
-        var now = getDate().getTime();
-        return _.map(getMetrics(), function(m){
-            return _getChart(m, parentChart, now);
-        });
-    }
-
-    function _renderGraph (fetch_data) {
-        /* Get a list of deferreds, one for each chart to be generated, based upon asynchronous
-           HTTP requests to the monitoring API. When all deferreds are done, then construct the
-           composite chart and render it. */
-
-        if(!fetch_data) {
-            chart.width($('#chart-container').width());
-            dc.renderAll();
-            return;
-        }
-
-        $('#chart').fadeTo(300, 0.1);
-        $('#chart-loading').show();
-
-        // Create new chart
-        chart = dc.compositeChart("#chart");
-
-        var fake = crossfilter([{x:0, y:1}]);
-
-        var fakeDimension = fake.dimension(function(d){
-            return d.x;
-        });
-
-        var fakeGroup = fakeDimension.group().reduceSum(function(d){
-            return d.y;
-        });
-
-        return $.when.apply(this, _getCharts(chart)).done(function(){
-
-            var charts = _.map(arguments, function(d){return d[0];});
-
-            // Perform some math to find the min for the y axis
-            var mins = _.map(arguments, function(d){return d[1];});
-            mins.push(0);
-            var min = Math.min.apply(null, mins);
-
-            // Perform some math to find the max for the y axis
-            var maxs = _.map(arguments, function(d){return d[2];});
-            maxs.push(0);
-            var max = Math.max.apply(null, maxs);
-
-
-            chart.width($('#chart-container').width())
-            .height(400)
-            .transitionDuration(500)
-            .margins({top: 10, right: 10, bottom: 30, left: 40})
-            .dimension(fakeDimension)
-            .group(fakeGroup)
-            .yAxisPadding(100)
-            .xAxisPadding(500)
-            .x(d3.time.scale().domain(getDomain()))
-            .y(d3.scale.linear().domain([min, max*1.25]))
-            .renderHorizontalGridLines(true)
-            .renderVerticalGridLines(true)
-            .compose(charts) // Use magic arguments "array" containind all of the constructed charts
-            .brushOn(false);
-
-            dc.renderAll();
-
-            $('#chart-loading').hide();
-            $('#chart').fadeTo(100, 1);
-            $('#chart-title').html(title);
-        });
-
-    }
-
-    function resetGraph() {
-        resetMetrics(false);
-        setPeriod(dates['day'].offset, true);
-    }
-
     function renderGraph (id) {
 
         Views.renderView('grapher');
@@ -733,30 +587,22 @@ define([
         _populateEntityTable();
         _populateSavedGraphsTable();
 
+
         // Load a saved graph if it exists
         metricMap = {};
         if(id) {
             new Models.SavedGraph({"_id": id}).fetch({success: function(g) {
-                activeGraph = g;
-                title = activeGraph.get('name');
-                _.each(activeGraph.get('series'), function(s){
-                    m = new Models.Metric({entity_id: s.entityId, check_id: s.checkId, name: s.metricName});
-                    addMetric(m);
-                });
-                setPeriod(g.get('period'), false);
-                _renderGraph(true);
+                this.plotView = new SavedGraphPlotView({el: "#chart-container", model: g});
+                plotview.render();
             }});
         } else {
-            title = "Unsaved Graph";
-            setPeriod(dates['day'].offset, false);
-            _renderGraph(true);
 
         }
-        $("#chart-container").resize(function(){_renderGraph(false);});
+        // $("#chart-container").resize(function(){_renderGraph(false);});
 
 
     }
 
-    return {'renderGraph': renderGraph, 'addMetric': addMetric, 'delMetric': delMetric, 'getMetrics': getMetrics, 'setPeriod': setPeriod, 'getPeriod': getPeriod};
+    return {'renderGraph': renderGraph};
 
 });
