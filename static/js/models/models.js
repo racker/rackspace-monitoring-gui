@@ -262,7 +262,7 @@ define([
                 return list;
             }
 
-            var req = depaginatedRequest(this.url() + '?from=' + start_time + '&to=' + end_time + '&points=' + points).done(formatData);
+            var req = depaginatedRequest(this.url() + '/plot?from=' + start_time + '&to=' + end_time + '&points=' + points).done(formatData);
 
             if(options != undefined) {
                 return req.then(options.success, options.error);
