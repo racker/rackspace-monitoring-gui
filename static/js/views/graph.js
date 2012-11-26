@@ -233,6 +233,168 @@ define([
         }
     });
 
+    var SavedGraphPlotView = Backbone.View.extend({
+
+        el: '#chart-container',
+        loading_el: '#chart-loading',
+        chart_el: '#chart',
+        title_el: '#chart-title',
+        period_el: '#daterangeselect',
+        metrics: {},
+        data: {},
+        period: 0,
+
+        initialize: function() {
+            this.chart = dc.compositeChart(this.chart_el);
+            this.bind(this.model);
+        },
+
+        bind: function(savedgraph) {
+            this.model.off('change', this.render);
+            this.model = savedgraph;
+            this.model.on('change', this.render);
+        },
+
+        _getMetricKey: function(metric) {
+            return [metric.get('entity_id'), metric.get('check_id'), metric.get('name')].join();
+        },
+
+        _getMetric: function(entity_id, check_id, metric_name) {
+
+        },
+
+        _getMetrics: function() {
+            return _.map(this.metrics.series, function(s) {
+                return new Models.Metric({entity_id: s.entityId, check_id: s.checkId, name: s.metricName});
+            });
+        },
+
+        /* Asynchronously fetch the data for a metric.  Returns a deferred that will
+           be resolved with the fetched data */
+        _getMetricData: function(metric, now) {
+            return metric.getData(now - getPeriod(), now, 500);
+        },
+
+        /* Refresh the data for the given metric, storing it into this.data.
+           Returns a deferred that fires when this task has been completed. */
+        _refreshMetricData: function(metric, now) {
+            return _getData(metric, now).then(function(d){
+                this.data[_getMetricKey(metric)] = d;
+            });
+        },
+
+        /* Refresh the data for all metrics, storing them in this.data.
+           Returns a deferred that fires when all metric data has been refreshed */
+        _refreshAllData: function(options) {
+            now = (new Datetime()).getTime();
+
+            var refreshFuncs = _.map(this._getMetrics(), function(m) {
+                return _refreshMetricData(m, now);
+            });
+
+            return $.when.apply(this, refreshFuncs).done();
+        },
+
+        /* Fetch */
+        _getChart: function(metric, parentChart, now) {
+            return _getData(metric, now).then(function(response) {
+                var data = crossfilter(response);
+
+                /* Create a timestamp dimension for this data */
+                var dataByTimestamp = data.dimension(function(d){
+                    return d.timestamp;
+                });
+
+                /* For each timestamp, the "group" is the average */
+                var dataByTimestampGroup = dataByTimestamp.group().reduceSum(function(d) {
+                    return d.average;
+                });
+
+                var min = Math.min.apply(null, _.map(dataByTimestampGroup.all(), function(d){return d.value;}));
+
+                var max = Math.max.apply(null, _.map(dataByTimestampGroup.all(), function(d){return d.value;}));
+
+                return [dc.lineChart(parentChart).dimension(dataByTimestamp).group(dataByTimestampGroup).title(function(d) {return "Value: " + d.value; }).renderTitle(true), min, max];
+            });
+        },
+
+        /* Return a list of charts, one for each metric, that are suitable to constuct a compound chart for graphing */
+        _getCharts: function(parentChart) {
+            var now = getDate().getTime();
+            return _.map(getMetrics(), function(m){
+                return _getChart(m, parentChart, now);
+            });
+        },
+
+        /* Get a list of deferreds, one for each chart to be generated, based upon asynchronous
+           HTTP requests to the monitoring API. When all deferreds are done, then construct the
+           composite chart and render it. */
+        render: function(no_refresh) {
+
+            if(no_refresh) {
+                chart.width($('#chart-container').width());
+                dc.renderAll();
+                return;
+            }
+
+            $(this.chart_el).fadeTo(300, 0.1);
+            $(this.loading_el).show();
+
+            // Create new chart
+            chart = dc.compositeChart("#chart");
+
+            var fake = crossfilter([{x:0, y:1}]);
+
+            var fakeDimension = fake.dimension(function(d){
+                return d.x;
+            });
+
+            var fakeGroup = fakeDimension.group().reduceSum(function(d){
+                return d.y;
+            });
+
+            return $.when.apply(this, _getCharts(chart)).done(function(){
+
+                var charts = _.map(arguments, function(d){return d[0];});
+
+                // Perform some math to find the min for the y axis
+                var mins = _.map(arguments, function(d){return d[1];});
+                mins.push(0);
+                var min = Math.min.apply(null, mins);
+
+                // Perform some math to find the max for the y axis
+                var maxs = _.map(arguments, function(d){return d[2];});
+                maxs.push(0);
+                var max = Math.max.apply(null, maxs);
+
+
+                chart.width($('#chart-container').width())
+                .height(400)
+                .transitionDuration(500)
+                .margins({top: 10, right: 10, bottom: 30, left: 40})
+                .dimension(fakeDimension)
+                .group(fakeGroup)
+                .yAxisPadding(100)
+                .xAxisPadding(500)
+                .x(d3.time.scale().domain(getDomain()))
+                .y(d3.scale.linear().domain([min, max*1.25]))
+                .renderHorizontalGridLines(true)
+                .renderVerticalGridLines(true)
+                .compose(charts) // Use magic arguments "array" containind all of the constructed charts
+                .brushOn(false);
+
+                dc.renderAll();
+
+                $('#chart-loading').hide();
+                $('#chart').fadeTo(100, 1);
+                $('#chart-title').html(title);
+            });
+
+
+        }
+
+    });
+
     var SavedGraphListView = Backbone.View.extend({
         events: {},
 
@@ -498,15 +660,13 @@ define([
            HTTP requests to the monitoring API. When all deferreds are done, then construct the
            composite chart and render it. */
 
-
-
         if(!fetch_data) {
             chart.width($('#chart-container').width());
             dc.renderAll();
             return;
         }
 
-        $('#chart').fadeTo(100, 0.5);
+        $('#chart').fadeTo(300, 0.1);
         $('#chart-loading').show();
 
         // Create new chart
