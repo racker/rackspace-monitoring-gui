@@ -172,6 +172,12 @@ define([
         data: {},
         period: 0,
 
+        events: {"resize": "_resizeHandler"},
+
+        _resizeHandler: function () {
+            this.render(true);
+        },
+
         initialize: function() {
             this.$loading_el = $('<img>')
                                     .addClass('chart-spinner')
@@ -181,7 +187,7 @@ define([
             this.$title_el = $('<h4>').addClass('chart-title');
             this.$el.append(this.$title_el);
 
-            this.chart_id = "chart-" + this.model.id;
+            this.chart_id = "chart-" + (this.model.id || this.model.cid);
             this.$chart_el = $('<div>').attr('id', this.chart_id);
             this.$el.append(this.$chart_el);
 
@@ -398,16 +404,25 @@ define([
                         .y(d3.scale.linear().domain([min, max*1.25]))
                         .compose(charts); // Use magic arguments "array" containind all of the constructed charts
 
+
+                console.log(this.chart.chartGroup());
                 dc.renderAll(this.chart_id);
 
                 this.$loading_el.hide();
                 this.$chart_el.fadeTo(100, 1);
                 this.$title_el.html(title);
             }.bind(this));
+        },
 
 
+        /*
+         * TODO: This will leak memory - dc doesn't provide a reasonable way to remove a graph from it's internal
+         * registry
+         */
+        destroy: function () {
+            this.undelegateEvents();
+            this.$el.empty();
         }
-
     });
 
     var SavedGraphListView = Backbone.View.extend({
@@ -587,18 +602,35 @@ define([
         _populateEntityTable();
         _populateSavedGraphsTable();
 
+        function _render(g) {
+            dc.deregisterAllCharts();
+
+            console.log(g);
+            console.log(plotView);
+
+            if (plotView) {
+                plotView.destroy();
+            }
+            plotView = new SavedGraphPlotView({el: "#chart-container", model: g});
+            plotView.render();
+        }
+
+        function _fetch_success(g) {
+            _render(g);
+        }
+
+        function _fetch_error() {
+            window.location.hash = "#grapher";
+            $("#chart-container").empty();
+        }
 
         // Load a saved graph if it exists
-        metricMap = {};
         if(id) {
-            new Models.SavedGraph({"_id": id}).fetch({success: function(g) {
-                this.plotView = new SavedGraphPlotView({el: "#chart-container", model: g});
-                plotview.render();
-            }});
+            new Models.SavedGraph({"_id": id}).fetch({success: _fetch_success, error: _fetch_error});
         } else {
-
+            var g = new Models.SavedGraph();
+            _render(g);
         }
-        // $("#chart-container").resize(function(){_renderGraph(false);});
 
 
     }
