@@ -2,6 +2,24 @@
   "name": "rackspace-monitoring-gui",
   "description": "webapp for rackspace monitoring",
   "version": "0.0.1",
+  "author": {
+    "name": "Rackspace US, Inc."
+  },
+  "contributors": [
+    "Brad Morgan <bradley.morgan@rackspace.com>",
+    "Alex Weeks <alex.weeks@rackspace.com>"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/racker/rackspace-monitoring-gui.git"
+  },
+  "licenses": [
+    {
+      "type": "Apache",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+    }
+  ],
+  "bin": "./bin/raxmongui",
   "private": true,
   "dependencies": {
     "express": "3.x",
@@ -10,6 +28,20 @@
     "connect-mongo": "0.2.x",
     "underscore": "1.4.x",
     "mongoose": "3.3.x",
-    "winston": "0.6.x"
+    "keystone-client": "0.3.x",
+    "rackspace-shared-utils": "0.1.x",
+    "logmagic": "0.1.4",
+    "optimist": "0.3.x",
+    "async": "0.1.x"
+  },
+  "devDependencies": {
+    "jshint": "0.9.x",
+    "requirejs": "2.1.x",
+    "jasmine-node": "1.0.x",
+    "jsdom": "0.2.19" 
+  }, 
+  "scripts": {
+    "lint": "./scripts/lint.sh",
+    "test": "./scripts/test.sh"
   }
 }

@@ -5,7 +5,19 @@ Tiny webapp for MaaS
 
 The point of this is to provide CK users a graphical interface for MaaS in the easiest way possible.
 
-1. Setup mongodb and start it
-2. Modify settings.js
-3. npm install
-4. node app.js
+setup
+=====
+1. npm install
+2. setup and run mongodb server
+3. modify settings.js
+4. ./bin/raxmongui -c </path/to/local_settings.js>
+
+tests
+=====
+1. npm install --dev
+2. npm run-script test
+
+jslint
+======
+1. npm install --dev
+2. npm run-script lint
