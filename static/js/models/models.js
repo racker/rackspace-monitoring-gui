@@ -66,9 +66,35 @@ define([
     var SavedGraph = Backbone.Model.extend({
         idAttribute: "_id",
         urlRoot: '/saved_graphs/',
+
         parse: function(response) {
             delete response.__v;
             return response;
+        },
+
+        hasMetric: function (checkId, metricName) {
+            return !!_.find(this.get('series'), function (series) {
+                return (
+                    (series.checkId === checkId) &&
+                    (series.metricName === metricName)
+                    );
+            });
+        },
+
+        hasCheck: function (checkId) {
+            return !!_.find(this.get('series'), function (series) {
+                return (
+                    series.checkId === checkId
+                    );
+            });
+        },
+
+        hasEnitiy: function (entityId) {
+            return !!_.find(this.get('series'), function (series) {
+                return (
+                    series.entityId === entityId
+                    );
+            });
         }
     });
 

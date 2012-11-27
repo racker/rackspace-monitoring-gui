@@ -10,15 +10,7 @@ define([
   'bootstrap'
 ], function($, Backbone, _, App, Views, Models, dc) {
 
-    var metricMap = {};
-    var dataMap = {};
-    var title = "";
-
-    var chart;
-
-    var palette = d3.scale.category10();
     var savedGraphListView;
-
     var plotView;
 
     var EntityView = Backbone.View.extend({
@@ -49,8 +41,6 @@ define([
         events: {'click': 'clickHandler'},
 
         clickHandler: function () {
-            $('.' + this.className).removeClass('success');
-            $(this.el).addClass('success');
             _populateMetricTable(this.model);
         },
 
@@ -68,19 +58,11 @@ define([
         events: {'click': 'clickHandler'},
 
         clickHandler: function () {
-            toggleMetric(this.model, true);
-            if(inMetrics(this.model)) {
-                $(this.el).addClass('success');
-            } else {
-                $(this.el).removeClass('success');
-            }
+
         },
 
         render: function () {
             $(this.el).addClass('clickable');
-            if(inMetrics(this.model)) {
-                $(this.el).addClass('success');
-            }
             $(this.el).html(this.template(this.model.toJSON()));
         }
     });
@@ -187,10 +169,6 @@ define([
             this.$title_el = $('<h4>').addClass('chart-title');
             this.$el.append(this.$title_el);
 
-            this.chart_id = "chart-" + (this.model.id || this.model.cid);
-            this.$chart_el = $('<div>').attr('id', this.chart_id);
-            this.$el.append(this.$chart_el);
-
             this.$period_el = $('<div>')
                                     .addClass('btn-group pull-right')
                                     .append(
@@ -205,6 +183,10 @@ define([
                                         $('<ul>')
                                             .addClass('dropdown-menu'));
             this.$el.append(this.$period_el);
+
+            this.chart_id = "chart-" + (this.model.id || this.model.cid);
+            this.$chart_el = $('<div>').attr('id', this.chart_id);
+            this.$el.append(this.$chart_el);
 
             this.chart = this._constructChart();
 
@@ -224,14 +206,14 @@ define([
             },
 
             _.each(this.dates, function(p) {
-                    $target = this.$period_el.children("ul");
+                    var $target = this.$period_el.children("ul");
 
                     $target.append(
                         $('<li>').append(
                             $('<a>').click(function() {
-                                this.setPeriod(p.offset, true);
+                                this.setPeriod(p.offset, false);
                                 this.$period_el.children('button').html(p.text + ' <span class="caret"></span');
-                            })
+                            }.bind(this))
                             .append(p.text)
                         )
 
@@ -295,10 +277,8 @@ define([
                 .yAxisPadding(100)
                 .xAxisPadding(500)
                 .x(d3.time.scale().domain(this._getDomain()))
-                // .y(d3.scale.linear().domain([0, 1]))
                 .renderHorizontalGridLines(true)
                 .renderVerticalGridLines(true)
-                // .compose(charts) // Use magic arguments "array" containind all of the constructed charts
                 .brushOn(false);
 
             return chart;
@@ -404,16 +384,13 @@ define([
                         .y(d3.scale.linear().domain([min, max*1.25]))
                         .compose(charts); // Use magic arguments "array" containind all of the constructed charts
 
-
-                console.log(this.chart.chartGroup());
                 dc.renderAll(this.chart_id);
 
                 this.$loading_el.hide();
                 this.$chart_el.fadeTo(100, 1);
-                this.$title_el.html(title);
+                this.$title_el.html(this.model.get('name') || 'Unsaved Graph');
             }.bind(this));
         },
-
 
         /*
          * TODO: This will leak memory - dc doesn't provide a reasonable way to remove a graph from it's internal
@@ -604,9 +581,6 @@ define([
 
         function _render(g) {
             dc.deregisterAllCharts();
-
-            console.log(g);
-            console.log(plotView);
 
             if (plotView) {
                 plotView.destroy();
