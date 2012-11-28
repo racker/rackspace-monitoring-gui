@@ -72,29 +72,43 @@ define([
             return response;
         },
 
-        hasMetric: function (checkId, metricName) {
+        hasMetric: function (metric) {
             return !!_.find(this.get('series'), function (series) {
                 return (
-                    (series.checkId === checkId) &&
-                    (series.metricName === metricName)
+                    (series.entityId === metric.get('entity_id')) &&
+                    (series.checkId === metric.get('check_id')) &&
+                    (series.metricName === metric.get('name'))
                     );
             });
+
         },
 
-        hasCheck: function (checkId) {
-            return !!_.find(this.get('series'), function (series) {
-                return (
-                    series.checkId === checkId
-                    );
-            });
+        addMetric: function (metric) {
+            var series = {};
+            series.entityId = metric.getEntity().id;
+            series.checkId = metric.getCheck().id;
+            series.metricName = metric.get('name');
+
+            console.log(series);
+
+            if (!this.hasMetric(metric)) {
+                this.get('series').push(series);
+                if (!this.isNew()) {
+                    this.save({wait: true});
+                }
+            }
         },
 
-        hasEnitiy: function (entityId) {
-            return !!_.find(this.get('series'), function (series) {
-                return (
-                    series.entityId === entityId
-                    );
+        removeSeries: function (series) {
+            var new_series =  _.reject(this.get('series'), function (s) {
+                return ((series.entityId === s.entityId) &&
+                        (series.checkId === s.checkId) &&
+                        (series.metricName === s.metricName));
             });
+            this.set({series: new_series});
+            if (!this.isNew()) {
+                this.save({wait: true});
+            }
         }
     });
 
@@ -256,12 +270,10 @@ define([
 
             Backbone.Model.prototype.save.call(this, cleaned_attr, options);
         },
-        getEntity: function(){
-            getAccount().entities.fetch();
+        getEntity: function(callback){
             return App.getInstance().account.entities.get(this.get('entity_id'));
         },
-        getCheck: function(){
-            this.getEntity().checks.fetch();
+        getCheck: function(callback){
             return this.getEntity().checks.get(this.get('check_id'));
         },
         getData: function(start_time, end_time, points, options) {

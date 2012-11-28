@@ -13,6 +13,8 @@ define([
     var savedGraphListView;
     var plotView;
 
+    var currentGraph;
+
     var EntityView = Backbone.View.extend({
         tagName: 'tr',
         className: 'entity-row',
@@ -58,7 +60,8 @@ define([
         events: {'click': 'clickHandler'},
 
         clickHandler: function () {
-
+            currentGraph.addMetric(this.model);
+            _renderGraph(currentGraph);
         },
 
         render: function () {
@@ -133,7 +136,7 @@ define([
         events: {"resize": "_resizeHandler"},
 
         _resizeHandler: function () {
-            this.render(true);
+            this.render(null, true);
         },
 
         initialize: function() {
@@ -196,11 +199,6 @@ define([
                     );
                 }, this);
             this.setPeriod(this.dates['day'].offset, true);
-        },
-
-        bind: function(savedgraph) {
-            this.model.off('change', this.render);
-            this.model.on('change', this.render);
         },
 
         setPeriod: function(p, no_refresh) {
@@ -330,7 +328,7 @@ define([
         /* Get a list of deferreds, one for each chart to be generated, based upon asynchronous
            HTTP requests to the monitoring API. When all deferreds are done, then construct the
            composite chart and render it. */
-        render: function(no_refresh) {
+        render: function(e, no_refresh) {
 
             if(no_refresh) {
                 this.chart.width($(this.el).width());
@@ -373,7 +371,6 @@ define([
          * registry
          */
         destroy: function () {
-            this.undelegateEvents();
             this.$el.empty();
         }
     });
@@ -388,6 +385,9 @@ define([
 
         deleteHandler: function () {
             this.model.destroy({'wait': true});
+            if (currentGraph.id === this.model.id) {
+                window.location.hash = 'grapher';
+            }
         },
 
         clickHandler: function () {
@@ -413,6 +413,7 @@ define([
 
         render: function()
         {
+            console.log('render');
             $(this.el).empty();
             this.collection.each(function (graph) {
                 this.add(graph);
@@ -421,14 +422,14 @@ define([
             return this;
         },
 
-            add: function(m)
-            {
-                var e = new SavedGraphView({
-                    model: m
-                });
-                e.render();
-                $(this.el).append(e.el);
-            }
+        add: function(m)
+        {
+            var e = new SavedGraphView({
+                model: m
+            });
+            e.render();
+            $(this.el).append(e.el);
+        }
     });
 
     var SaveGraphButton = Backbone.View.extend ({
@@ -436,8 +437,9 @@ define([
         el: $('#save-graph-button'),
         events: {'click': 'clickHandler'},
 
-        saveSuccess: function (collection, graph) {
+        saveSuccess: function () {
             $('#save-graph-modal').modal('hide');
+            window.location.hash = 'grapher/' + currentGraph.id;
         },
 
         saveError: function (graph, response) {
@@ -455,14 +457,8 @@ define([
 
         clickHandler: function () {
             var name = $('#graph-name-input').val();
-            var graph = {
-                name: name,
-                period: getPeriod(),
-                series: dumpMetrics()
-            };
-            App.getInstance().account.graphs.create(graph, {success: this.saveSuccess.bind(this),
-                                                            error: this.saveError.bind(this),
-                                                            'wait': true});
+            currentGraph.save({name: name, period: plotView.getPeriod()}, {success: this.saveSuccess.bind(this), error: this.saveError});
+            App.getInstance().account.graphs.add(currentGraph);
         }
 
     });
@@ -478,31 +474,38 @@ define([
 
     });
 
-    var selected_metrics = [];
-
     var SelectedMetricView = Backbone.View.extend({
         tagName: 'span',
-        className: 'selected-metric',
-        template: _.template("<span><%= entityId %>.<%= checkId %>.<%= metricName %><a class='delete'>x</a></span>"),
+        template: _.template("<%= entityId %>.<%= checkId %>.<%= metricName %> <i class='icon-remove delete clickable'></i>"),
 
         events: {'click .delete': 'deleteHandler'},
 
+        initialize: function () {
+            this.series = this.options.series;
+        },
+
         deleteHandler: function () {
-            console.log('DELETE ' + this.model.name);
+            currentGraph.removeSeries(this.series);
+            currentGraph.save();
+            _renderGraph(currentGraph);
         },
 
         render: function () {
-            $(this.el).addClass('clickable');
-            $(this.el).html(this.template(this.model));
+            $(this.el).addClass('selected-metric');
+            $(this.el).addClass('badge');
+            $(this.el).html(this.template(this.series));
         }
     });
 
     var SelectedMetricsView = Backbone.View.extend({
 
+        _seriesCount: 0,
+
         render: function()
         {
+            this._seriesCount = 0;
             $(this.el).empty();
-            _.each(this.model.get('series'), function (s) {
+            _.each(currentGraph.get('series'), function (s) {
                 this.add(s);
             }.bind(this));
             return this;
@@ -511,8 +514,10 @@ define([
         add: function(s)
         {
             var e = new SelectedMetricView({
-                model: s
+                series: s,
+                className: '_' + this._seriesCount
             });
+            this._seriesCount++;
             e.render();
             $(this.el).append(e.el);
         }
@@ -521,7 +526,7 @@ define([
 
     function _populateSelectedMetrics (graph) {
 
-        var selectedMetricsView = new SelectedMetricsView({el: $('#selected-metrics'), model: graph});
+        var selectedMetricsView = new SelectedMetricsView({el: $('#selected-metrics')});
         selectedMetricsView.render();
     }
 
@@ -619,6 +624,22 @@ define([
 
     }
 
+    function _renderGraph(graph) {
+
+        currentGraph = graph;
+
+        dc.deregisterAllCharts();
+
+        if (plotView) {
+            plotView.destroy();
+        }
+        plotView = new SavedGraphPlotView({el: "#chart-container", model: graph});
+        plotView.render();
+
+        _populateSelectedMetrics();
+
+    }
+
     function renderGraph (id) {
 
         Views.renderView('grapher');
@@ -626,19 +647,8 @@ define([
         _populateEntityTable();
         _populateSavedGraphsTable();
 
-        function _render(g) {
-            dc.deregisterAllCharts();
-
-            if (plotView) {
-                plotView.destroy();
-            }
-            plotView = new SavedGraphPlotView({el: "#chart-container", model: g});
-            _populateSelectedMetrics(g);
-            plotView.render();
-        }
-
         function _fetch_success(g) {
-            _render(g);
+            _renderGraph(g);
         }
 
         function _fetch_error() {
@@ -650,11 +660,9 @@ define([
         if(id) {
             new Models.SavedGraph({"_id": id}).fetch({success: _fetch_success, error: _fetch_error});
         } else {
-            var g = new Models.SavedGraph();
-            _render(g);
+            var g = new Models.SavedGraph({series: []});
+            _renderGraph(g);
         }
-
-
     }
 
     return {'renderGraph': renderGraph};
