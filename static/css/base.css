@@ -22,42 +22,62 @@ body {
     text-align: center;
 }
 
+.dc-chart ._0,
 .dc-chart ._0 .line {
     stroke: #1f77b4;
+    background-color: #1f77b4;
 }
 
+.dc-chart ._1,
 .dc-chart ._1 .line {
     stroke: #ff7f0e;
+    background-color: ;
+
 }
 
+.dc-chart ._2,
 .dc-chart ._2 .line {
     stroke: #2ca02c;
+    background-color: #2ca02c;
 }
 
+.dc-chart ._3,
 .dc-chart ._3 .line {
     stroke: #d62728;
+    background-color: #d62728;
 }
 
+.dc-chart ._4,
 .dc-chart ._4 .line {
     stroke: #9467bd;
+    background-color: #9467bd;
 }
 
+.dc-chart ._5,
 .dc-chart ._5 .line {
     stroke: #8c564b;
+    background-color: #8c564b;
 }
 
+.dc-chart ._6,
 .dc-chart ._6 .line {
     stroke: #e377c2;
+    background-color: #e377c2;
 }
 
+.dc-chart ._7,
 .dc-chart ._7 .line {
     stroke: #7f7f7f;
+    background-color: #7f7f7f;
 }
 
+.dc-chart ._8,
 .dc-chart ._8 .line {
     stroke: #bcbd22;
+    background-color: #bcbd22;
 }
-
+.dc-chart ._9,
 .dc-chart ._9 .line {
     stroke: #17becf;
+    background-color: #17becf;
 }
