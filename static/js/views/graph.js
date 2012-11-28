@@ -124,30 +124,6 @@ define([
         }
     });
 
-    var SavedGraphView = Backbone.View.extend({
-        tagName: 'tr',
-        className: 'saved-graph-row',
-        template: _.template("<td><a class='select'><%= name %></a></td><td><a class='delete'>delete</a></td>"),
-
-        events: {'click .select': 'clickHandler',
-                 'click .delete': 'deleteHandler'},
-
-        deleteHandler: function () {
-            this.model.destroy({'wait': true});
-        },
-
-        clickHandler: function () {
-            $('.' + this.className).removeClass('success');
-            $(this.el).addClass('success');
-            window.location.hash = 'grapher/' + this.model.id;
-        },
-
-        render: function () {
-            $(this.el).addClass('clickable');
-            $(this.el).html(this.template(this.model.toJSON()));
-        }
-    });
-
     var SavedGraphPlotView = Backbone.View.extend({
 
         metrics: {},
@@ -402,6 +378,30 @@ define([
         }
     });
 
+    var SavedGraphView = Backbone.View.extend({
+        tagName: 'tr',
+        className: 'saved-graph-row',
+        template: _.template("<td><a class='select'><%= name %></a></td><td><a class='delete'>delete</a></td>"),
+
+        events: {'click .select': 'clickHandler',
+                 'click .delete': 'deleteHandler'},
+
+        deleteHandler: function () {
+            this.model.destroy({'wait': true});
+        },
+
+        clickHandler: function () {
+            $('.' + this.className).removeClass('success');
+            $(this.el).addClass('success');
+            window.location.hash = 'grapher/' + this.model.id;
+        },
+
+        render: function () {
+            $(this.el).addClass('clickable');
+            $(this.el).html(this.template(this.model.toJSON()));
+        }
+    });
+
     var SavedGraphListView = Backbone.View.extend({
         events: {},
 
@@ -421,14 +421,14 @@ define([
             return this;
         },
 
-        add: function(m)
-        {
-            var e = new SavedGraphView({
-                model: m
-            });
-            e.render();
-            $(this.el).append(e.el);
-        }
+            add: function(m)
+            {
+                var e = new SavedGraphView({
+                    model: m
+                });
+                e.render();
+                $(this.el).append(e.el);
+            }
     });
 
     var SaveGraphButton = Backbone.View.extend ({
@@ -477,6 +477,53 @@ define([
         }
 
     });
+
+    var selected_metrics = [];
+
+    var SelectedMetricView = Backbone.View.extend({
+        tagName: 'span',
+        className: 'selected-metric',
+        template: _.template("<span><%= entityId %>.<%= checkId %>.<%= metricName %><a class='delete'>x</a></span>"),
+
+        events: {'click .delete': 'deleteHandler'},
+
+        deleteHandler: function () {
+            console.log('DELETE ' + this.model.name);
+        },
+
+        render: function () {
+            $(this.el).addClass('clickable');
+            $(this.el).html(this.template(this.model));
+        }
+    });
+
+    var SelectedMetricsView = Backbone.View.extend({
+
+        render: function()
+        {
+            $(this.el).empty();
+            _.each(this.model.get('series'), function (s) {
+                this.add(s);
+            }.bind(this));
+            return this;
+        },
+
+        add: function(s)
+        {
+            var e = new SelectedMetricView({
+                model: s
+            });
+            e.render();
+            $(this.el).append(e.el);
+        }
+
+    });
+
+    function _populateSelectedMetrics (graph) {
+
+        var selectedMetricsView = new SelectedMetricsView({el: $('#selected-metrics'), model: graph});
+        selectedMetricsView.render();
+    }
 
     function _populateMetricTable (check) {
         var app = App.getInstance();
@@ -586,6 +633,7 @@ define([
                 plotView.destroy();
             }
             plotView = new SavedGraphPlotView({el: "#chart-container", model: g});
+            _populateSelectedMetrics(g);
             plotView.render();
         }
 
