@@ -10,10 +10,24 @@ define([
   'bootstrap'
 ], function($, Backbone, _, App, Views, Models, dc) {
 
-    var savedGraphListView;
     var plotView;
+    var graphId;
+    var _unsavedGraph;
 
-    var currentGraph;
+    function _getGraphById(id) {
+        var g = App.getInstance().account.graphs.get(id);
+        if(!g) {
+            if (!_unsavedGraph) {
+                _unsavedGraph = new Models.SavedGraph({name: "Untitled Graph", series:[]});
+            }
+            g = _unsavedGraph;
+        }
+        return g;
+    }
+
+    function _getCurrentGraph() {
+        return _getGraphById(graphId);
+    }
 
     var EntityView = Backbone.View.extend({
         tagName: 'tr',
@@ -60,8 +74,8 @@ define([
         events: {'click': 'clickHandler'},
 
         clickHandler: function () {
-            currentGraph.addMetric(this.model);
-            _renderGraph(currentGraph);
+            _getCurrentGraph().addMetric(this.model);
+            _renderGraph(_getCurrentGraph());
         },
 
         render: function () {
@@ -199,6 +213,8 @@ define([
                     );
                 }, this);
             this.setPeriod(this.dates['day'].offset, true);
+
+            this.model.on('change', this.render.bind(this));
         },
 
         setPeriod: function(p, no_refresh) {
@@ -336,7 +352,7 @@ define([
                 return;
             }
 
-            this.$chart_el.fadeTo(300, 0.1);
+            this.$chart_el.fadeTo(1, 0.1);
             this.$loading_el.show();
 
             return $.when.apply(this, this._getCharts(this.chart)).done(function(){
@@ -362,7 +378,7 @@ define([
 
                 this.$loading_el.hide();
                 this.$chart_el.fadeTo(100, 1);
-                this.$title_el.html(this.model.get('name') || 'Unsaved Graph');
+                this.$title_el.html(this.model.get('name'));
             }.bind(this));
         },
 
@@ -383,9 +399,13 @@ define([
         events: {'click .select': 'clickHandler',
                  'click .delete': 'deleteHandler'},
 
+        initialize: function() {
+            this.model.on('change', this.render.bind(this));
+        },
+
         deleteHandler: function () {
-            this.model.destroy({'wait': true});
-            if (currentGraph.id === this.model.id) {
+            this.model.destroy();
+            if (_getCurrentGraph().id === this.model.id) {
                 window.location.hash = 'grapher';
             }
         },
@@ -408,7 +428,6 @@ define([
         initialize: function() {
             this.collection.on('add', this.render.bind(this));
             this.collection.on('remove', this.render.bind(this));
-            this.rendered = false;
         },
 
         render: function()
@@ -418,7 +437,6 @@ define([
             this.collection.each(function (graph) {
                 this.add(graph);
             }.bind(this));
-            this.rendered = true;
             return this;
         },
 
@@ -438,12 +456,12 @@ define([
         events: {'click': 'clickHandler'},
 
         saveSuccess: function () {
-            $('#save-graph-modal').modal('hide');
-            window.location.hash = 'grapher/' + currentGraph.id;
+            $('#save-graph-modal').modal('hide', function() {this.$el.removeAttr('disabled');});
+            window.location.hash = 'grapher/' + _getCurrentGraph().id;
         },
 
         saveError: function (graph, response) {
-
+            this.$el.removeAttr('disabled');
             try {
                 r = JSON.parse(response.responseText);
             } catch (e) {
@@ -456,9 +474,15 @@ define([
         },
 
         clickHandler: function () {
+            this.$el.attr('disabled', 'disabled');
             var name = $('#graph-name-input').val();
-            currentGraph.save({name: name, period: plotView.getPeriod()}, {success: this.saveSuccess.bind(this), error: this.saveError});
-            App.getInstance().account.graphs.add(currentGraph);
+
+            g = _getCurrentGraph();
+            g.set('name', name);
+            g.set('period', plotView.getPeriod());
+            g.save({}, {success: this.saveSuccess.bind(this), error: this.saveError});
+            g.change();
+            App.getInstance().account.graphs.add(g);
         }
 
     });
@@ -485,9 +509,9 @@ define([
         },
 
         deleteHandler: function () {
-            currentGraph.removeSeries(this.series);
-            currentGraph.save();
-            _renderGraph(currentGraph);
+            _getCurrentGraph().removeSeries(this.series);
+            _getCurrentGraph().save();
+            _renderGraph(_getCurrentGraph());
         },
 
         render: function () {
@@ -505,7 +529,7 @@ define([
         {
             this._seriesCount = 0;
             $(this.el).empty();
-            _.each(currentGraph.get('series'), function (s) {
+            _.each(_getCurrentGraph().get('series'), function (s) {
                 this.add(s);
             }.bind(this));
             return this;
@@ -597,43 +621,28 @@ define([
         return [metric.get('entity_id'), metric.get('check_id'), metric.get('name')].join();
     }
 
-    function _populateSavedGraphsTable() {
+    function _populateSavedGraphsTable(c) {
 
-        var app = App.getInstance();
-        var saveGraphButton, showSaveGraphModalButton;
+        var savedGraphListView, saveGraphButton, showSaveGraphModalButton;
 
-        var graph_fetch_success = function (collection, response) {
-
-            if (!savedGraphListView) {
-                savedGraphListView = new SavedGraphListView({'el': $('#saved-graph-table'), 'collection': collection});
-            }
-            if (!savedGraphListView.rendered) {
-                savedGraphListView.render();
-            }
-        };
-
-        var graph_fetch_failure = function (collection, response) {
-            $('#saved-graph-table').html('<tr><td>Failed to fetch graphs</td></tr>');
-
-        };
+        if (!savedGraphListView) {
+            savedGraphListView = new SavedGraphListView({'el': $('#saved-graph-table'), 'collection': c});
+        }
+        savedGraphListView.render();
 
         saveGraphButton = new SaveGraphButton();
         showSaveGraphModalButton = new ShowSaveGraphModalButton();
 
-        app.account.graphs.fetch({"success": graph_fetch_success, "error": graph_fetch_failure});
-
     }
 
-    function _renderGraph(graph) {
-
-        currentGraph = graph;
+    function _renderGraph() {
 
         dc.deregisterAllCharts();
 
         if (plotView) {
             plotView.destroy();
         }
-        plotView = new SavedGraphPlotView({el: "#chart-container", model: graph});
+        plotView = new SavedGraphPlotView({el: "#chart-container", model: _getCurrentGraph()});
         plotView.render();
 
         _populateSelectedMetrics();
@@ -641,28 +650,31 @@ define([
     }
 
     function renderGraph (id) {
+        graphId = id;
 
         Views.renderView('grapher');
 
         _populateEntityTable();
-        _populateSavedGraphsTable();
 
-        function _fetch_success(g) {
-            _renderGraph(g);
+        function _fetch_success(c) {
+            var g = _getCurrentGraph();
+            if(g.isNew()) {
+                window.location.hash = "grapher";
+            }
+            _populateSavedGraphsTable(c);
+            _renderGraph();
         }
 
         function _fetch_error() {
             window.location.hash = "#grapher";
             $("#chart-container").empty();
+            $('#saved-graph-table').html('<tr><td>Failed to fetch graphs</td></tr>');
+
         }
 
         // Load a saved graph if it exists
-        if(id) {
-            new Models.SavedGraph({"_id": id}).fetch({success: _fetch_success, error: _fetch_error});
-        } else {
-            var g = new Models.SavedGraph({series: []});
-            _renderGraph(g);
-        }
+
+        App.getInstance().account.graphs.fetch({success: _fetch_success, error: _fetch_error});
     }
 
     return {'renderGraph': renderGraph};
