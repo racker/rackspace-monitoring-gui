@@ -476,7 +476,7 @@ define([
 
     var SelectedMetricView = Backbone.View.extend({
         tagName: 'span',
-        template: _.template("<%= entityId %>.<%= checkId %>.<%= metricName %> <i class='icon-remove delete clickable'></i>"),
+        template: _.template("<%= entityId %>,<%= checkId %>,<%= metricName %>&nbsp;<i class='icon-remove delete clickable'></i>"),
 
         events: {'click .delete': 'deleteHandler'},
 

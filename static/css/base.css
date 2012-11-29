@@ -81,3 +81,8 @@ body {
     stroke: #17becf;
     background-color: #17becf;
 }
+
+#selected-metrics > span {
+    white-space: normal;
+    display: inline-block;
+}
