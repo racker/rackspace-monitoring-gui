@@ -1,17 +1,26 @@
-.row
-	.span6
-		h2 Entity Details
-		table(class="table table-striped")
-			thead
-				tr
-					th= 'Key'
-					th= 'Value'
-			tbody(id="entity-details")
-	.span6
-		h2 Checks
-		table(class="table table-striped")
-			thead
-				tr
-					th= 'Label'
-					th= 'ID'
-			tbody(id="entity-checks-list")
+#entityalert
+.row-fluid
+    .span12
+        h2.pull-left= "Entity Details"
+        button.btn.btn-primary.pull-right(id="edit-entity-button")= "Edit"
+        button.btn.btn-success.pull-right.hide(id="save-entity-button")= "Save"
+        button.btn.btn-danger.pull-right.hide(id="cancel-entity-button")= "Cancel"
+.row-fluid
+    .row
+        .span12
+            dl#entity-details.dl-horizontal
+    .row
+        .span12
+            dl#entity-ip-addresses.dl-horizontal
+    .row
+        .span12
+            dl#entity-metadata.dl-horizontal
+.row    
+    .span12
+        h2 Checks
+        table(class="table table-striped")
+            thead
+                tr
+                    th= 'Label'
+                    th= 'ID'
+            tbody(id="entity-checks-list")

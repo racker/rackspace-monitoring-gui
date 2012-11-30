@@ -4,15 +4,16 @@ define([
   'backbone',
   'underscore',
   'views/views',
+  'views/entities',
   'views/graph'
-], function($, Backbone, _, Views, Graph) {
+], function($, Backbone, _, Views, EntityViews, Graph) {
 
   var router;
   var started = false;
 
   var _addRouteHandlers = function () {
-    router.on('route:entitiesRoute', function () {Views.renderEntitiesList();});
-    router.on('route:entityDetailsRoute', function (id) {Views.renderEntityDetails(id);});
+    router.on('route:entitiesRoute', function () {EntityViews.renderEntitiesList();});
+    router.on('route:entityDetailsRoute', function (id) {EntityViews.renderEntityDetails(id);});
     router.on('route:checkDetailsRoute', function (id, cid) {Views.renderCheckDetails(id, cid);});
     router.on('route:alarmDetailsRoute', function (id, aid) {Views.renderAlarmDetails(id, aid);});
     router.on('route:grapherRoute', function (id) {Graph.renderGraph(id);});

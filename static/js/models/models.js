@@ -135,8 +135,11 @@ define([
             return BASE_URL + '/entities/' + this.id;
         },
         parse: function(response) {
-            this.account = response.account;
-            delete response.account;
+            /* Updates (HTTP PUT) return 204 (no content), so we have to be a little defensive here */
+            if(response) {
+                this.account = response.account;
+                delete response.account;
+            }
             return response;
         },
         initialize: function() {
