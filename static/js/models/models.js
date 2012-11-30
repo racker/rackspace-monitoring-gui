@@ -131,9 +131,38 @@ define([
 
     /* ENTITIES */
     var Entity = Backbone.Model.extend({
-        url: function() {
-            return BASE_URL + '/entities/' + this.id;
+        urlRoot: BASE_URL + '/entities/',
+
+        /* HAAAAAAAAAAACK */
+        sync: function(method, model, options) {
+
+            function doSuccess(resp, status, xhr) {
+                var id = xhr.getResponseHeader('Location').split('/').pop();
+
+                resp = {id: id};
+                xhr.responseText = JSON.stringify(resp);
+
+                options['success'](resp, status, xhr);
+            }
+
+            function doError(model, response) {
+                options['error'](model, response);
+            }
+
+            if(method === 'create') {
+                var newOptions = _.reject(options, function(key) {
+                    return key === 'success' || key === 'error';
+                });
+                newOptions['success'] = doSuccess;
+                newOptions['error'] = doError;
+                var response = Backbone.sync(method, model, newOptions);
+
+            } else {
+                return Backbone.sync(method, model, options);
+            }
+
         },
+
         parse: function(response) {
             /* Updates (HTTP PUT) return 204 (no content), so we have to be a little defensive here */
             if(response) {
@@ -142,6 +171,7 @@ define([
             }
             return response;
         },
+
         initialize: function() {
             this.checks = nestCollection(this, 'checks', new EntityCheckCollectionFactory(this));
             this.alarms = nestCollection(this, 'alarms', new EntityAlarmCollectionFactory(this));

@@ -4,7 +4,8 @@ define([
   'underscore',
   'app',
   'models/models',
-  'views/views'
+  'views/views',
+  'jquerydebounce'
 ], function($, Backbone, _, App, Models, Views) {
 
     var entitiesView;
@@ -23,12 +24,12 @@ define([
     var CheckListView = Backbone.View.extend({
         el: $('#entity-checks-list'),
         events: {},
-    
+
         initialize: function()
         {
             this._cache = {};
         },
-    
+
         render: function()
         {
             $(this.el).empty();
@@ -105,7 +106,7 @@ define([
             };
 
             var _error = function (model, xhr) {
-                
+
                 var error = {message: 'Unknown Error', details: 'Try again later'};
                 try {
                     var r = JSON.parse(xhr.responseText);
@@ -181,14 +182,39 @@ define([
         }
     });
 
+
     /* This should be bound to a model, so updates should rerender correctly */
     var EntityView = Backbone.View.extend({
         tagName: 'tr',
-        template: _.template("<td><%= label %></a></td><td><%= id %></td>"),
-        events: {"click": "clickHandler"},
+        template: _.template("<td><a class='details'><%= label %></a></td><td><%= id %></td><td><i class='icon-remove delete'></i></td>"),
+        events: {"click .details": "detailsHandler",
+                 "click .delete": 'deleteHandler'},
 
-        clickHandler: function () {
+        detailsHandler: function () {
             window.location.hash = 'entities/' + this.model.id;
+        },
+
+        deleteHandler: function () {
+            function deleteEntity() {
+                console.log("delete");
+                this.model.destroy();
+                $("#delete-entity-confirm-button").off('click');
+                $('#delete-entity-modal').modal('hide');
+            }
+
+            function cancelDelete() {
+                $("#delete-entity-confirm-button").off('click');
+                $('#delete-entity-modal').modal('hide');
+            }
+
+            var delete_button = $("<button>").addClass('btn btn-primary delete').append("Delete");
+            var cancel_button = $("<button>").addClass('btn cancel').append("Cancel");
+
+            $("#delete-entity-modal-header").empty().append("Confirm Deletion of " + this.model.get('label'));
+            $("#delete-entity-confirm-button").on('click', $.throttle( 250, deleteEntity.bind(this)));
+            $("#delete-entity-cancel-button").on('click', cancelDelete);
+
+            $('#delete-entity-modal').modal('show');
         },
 
         render: function() {
@@ -202,7 +228,56 @@ define([
     var EntitiesView = Backbone.View.extend({
         el: $('#entity-list'),
         events: {},
-    
+
+        initialize: function() {
+            this.collection.on('change', this.render.bind(this));
+            this.collection.on('add', this.render.bind(this));
+            this.collection.on('remove', this.render.bind(this));
+            $('#new-entity-button').on('click', this.handleNew.bind(this));
+            $('#new-entity-save-button').on('click', this.handleSave.bind(this));
+        },
+
+        handleNew: function() {
+            $('#new-entity-modal').modal('show');
+        },
+
+        handleSave: function() {
+            function saveSuccess(entity) {
+                entity.fetch({
+                    success: function(e) {
+                        $('#new-entity-modal').modal('hide', function() {$("#new-entity-save-button").removeAttr('disabled');});
+                        App.getInstance().account.entities.add(e);
+                        window.location.hash = 'entities/' + e.id;
+                    }, error: function(e) {
+                        $("#new-entity-save-button").removeAttr('disabled');
+
+                        $('#entity-label-input-error').empty();
+                        $('#entity-label-input-control-group').addClass('error');
+                        $('#entity-label-input-error').html("Error fetching new entity");
+                    }
+                });
+            }
+
+            function saveError(graph, response) {
+                $("#new-entity-save-button").removeAttr('disabled');
+                try {
+                    r = JSON.parse(response.responseText);
+                } catch (e) {
+                    r = {'name': 'UnknownError', 'message': 'UnknownError: An unknown error occured.'};
+                }
+
+                $('#entity-label-input-error').empty();
+                $('#entity-label-input-control-group').addClass('error');
+                $('#entity-label-input-error').html(r.message);
+            }
+
+            $("#new-entity-save-button").attr('disabled', 'disabled');
+            var label = $('#entity-label-input').val();
+
+            e = new Models.Entity({label: label});
+            e.save({}, {success: saveSuccess.bind(this), error: saveError});
+        },
+
         render: function()
         {
             $(this.el).empty();
