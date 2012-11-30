@@ -47,10 +47,140 @@ define([
         }
     });
 
+    var EntityMetadataDetailsView = Backbone.View.extend({
+        tagName: "dl",
+        className: "dl-horizontal",
+        metadatatemplate: _.template(
+            "<% _.each(metadata, function(value, key) { %>" +
+                "<dt><strong><%= key %></strong></dt>" +
+                "<dd><%= value %></dd>" +
+            "<% }); %>"
+        ),
+        form_metadatatemplate: _.template(
+            "<% _.each(metadata, function(value, key) { %>" +
+                "<dt><input class='metadata_label', type='text' name='<%= key %>', value='<%= key %>'></dt>" +
+                "<dd><input class='metadata_value', type='text' name='<%= value %>', value='<%= value %>'></dd>" +
+            "<% }); %>"
+        ),
+        new_template: _.template(
+            "<dt><input class='metadata_label', type='text', placeholder='key'></dt>" +
+            "<dd><input class='metadata_value', type='text', placeholder='value'></dd>"
+        ),
+
+        handleNew: function (e) {
+            if (e) {
+                $(e.target.parentElement.parentElement).off('click');
+            }
+            var newmetadata = $('<div>').append(this.new_template()).on('click', function (e) {
+                this.handleNew(e);
+            }.bind(this));
+            this.$el.append(newmetadata);
+
+        },
+
+        getValues: function () {
+            var labels = $(this.el).find('.metadata_label');
+            var values = $(this.el).find('.metadata_value');
+
+            var r = _.reduce(labels, function(memo, label, index, labels) {
+
+                var l = label.value;
+                var v = values[index] ? values[index].value : null;
+
+                if (l && v) {
+                    memo[l] = v;
+                }
+                return memo;
+            }, {});
+
+            return r;
+        },
+
+        render: function (edit) {
+            
+            this.$el.empty();
+            var metadatatemplate = edit ? this.form_metadatatemplate: this.metadatatemplate;
+            this.$el.append(metadatatemplate(this.model.toJSON()));
+
+            if (edit) {
+                this.handleNew();
+            }
+
+            return this.$el;
+        }
+    });
+
+
+    var EntityIPDetailsView = Backbone.View.extend({
+        tagName: "dl",
+        className: "dl-horizontal",
+        iptemplate: _.template(
+            "<% _.each(ip_addresses, function(value, key) { %>" +
+                "<dt><strong><%= key %></strong></dt>" +
+                "<dd><%= value %></dd>" +
+            "<% }); %>"
+        ),
+        form_iptemplate: _.template(
+            "<% _.each(ip_addresses, function(value, key) { %>" +
+                "<dt><input class='ip_label', type='text' name='<%= key %>', value='<%= key %>'></dt>" +
+                "<dd><input class='ip_value', type='text' name='<%= value %>', value='<%= value %>'></dd>" +
+            "<% }); %>"
+        ),
+        new_template: _.template(
+            "<dt><input class='ip_label', type='text', placeholder='ip_label'></dt>" +
+            "<dd><input class='ip_value', type='text', placeholder='0.0.0.0'></dd>"
+        ),
+
+        handleNew: function (e) {
+            if (e) {
+                $(e.target.parentElement.parentElement).off('click');
+            }
+            var newip = $('<div>').append(this.new_template()).on('click', function (e) {
+                this.handleNew(e);
+            }.bind(this));
+            this.$el.append(newip);
+
+        },
+
+        getValues: function () {
+            var labels = $(this.el).find('.ip_label');
+            var values = $(this.el).find('.ip_value');
+
+            var r = _.reduce(labels, function(memo, label, index, labels) {
+
+                var l = label.value;
+                var v = values[index] ? values[index].value : null;
+
+                if (l && v) {
+                    memo[l] = v;
+                }
+                return memo;
+            }, {});
+
+            return r;
+        },
+
+        render: function (edit) {
+            
+            this.$el.empty();
+            var iptemplate = edit ? this.form_iptemplate: this.iptemplate;
+            this.$el.append(iptemplate(this.model.toJSON()));
+
+            if (edit) {
+                this.handleNew();
+            }
+
+            return this.$el;
+        }
+    });
 
     var EntityDetailsView = Backbone.View.extend({
         el: $('#entity-details'),
         _pre_save_cache: {},
+
+        _ip_addresses_view: null,
+        _metadata_view: null,
+
         template: _.template(
             "<dt><strong>label</strong></dt><dd><%= label %></dd>" +
             "<dt><strong>agent id</strong></dt><dd><%= agent_id %></dd>" +
@@ -65,18 +195,6 @@ define([
             "<dt><strong>managed</strong></dt><dd><%= managed %></dd>" +
             "<dt><strong>uri</strong></dt><dd><%= uri %></dd>"
         ),
-        iptemplate: _.template(
-            "<% _.each(ip_addresses, function(value, key) { %>" +
-                "<dt><strong><%= key %></strong></dt>" +
-                "<dd><%= value %></dd>" +
-            "<% }); %>"
-        ),
-        metadatatemplate: _.template(
-            "<% _.each(metadata, function(value, key) { %>" +
-                "<dt><strong><%= key %></strong></dt>" +
-                "<dd><%= value %></dd>" +
-            "<% }); %>"
-        ),
         errortemplate: _.template(
             "<div class='alert alert-error'>" +
                 "<button type='button' class='close' data-dismiss='alert'>×</button>" +
@@ -86,6 +204,10 @@ define([
         ),
 
         initialize: function () {
+            $('#edit-entity-button').off('click');
+            $('#save-entity-button').off('click');
+            $('#cancel-entity-button').off('click');
+
             $('#edit-entity-button').on('click', this.handleEdit.bind(this));
             $('#save-entity-button').on('click', this.handleSave.bind(this));
             $('#cancel-entity-button').on('click', this.handleCancel.bind(this));
@@ -130,6 +252,18 @@ define([
                 }
             }.bind(this));
 
+            var ips = this._ip_addresses_view.getValues();
+            if (!_.isEqual(ips, this.model.get('ip_addresses'))) {
+                _cache['ip_addresses'] = this.model.get('ip_addresses');
+                changed['ip_addresses'] = ips;
+            }
+
+            var metadata = this._metadata_view.getValues();
+            if (!_.isEqual(metadata, this.model.get('metadata'))) {
+                _cache['metadata'] = this.model.get('metadata');
+                changed['metadata'] = metadata;
+            }
+
             if (!_.isEmpty(changed)) {
                 this.model.save(changed, {success: _success.bind(this), error: _error.bind(this)});
             } else {
@@ -138,7 +272,7 @@ define([
         },
 
         handleCancel: function () {
-            $(this.el).html(this.template(this.model.toJSON()));
+            this.render(false);
             $('#edit-entity-button').show();
             $('#save-entity-button').hide();
             $('#cancel-entity-button').hide();
@@ -146,7 +280,7 @@ define([
         },
 
         handleEdit: function () {
-            $(this.el).html(this.form_template(this.model.toJSON()));
+            this.render(true);
             $('#edit-entity-button').hide();
             $('#save-entity-button').show();
             $('#cancel-entity-button').show();
@@ -165,28 +299,40 @@ define([
             cl.html("<tr><td>Failed Loading Checks</td></tr>");
         },
 
-        render: function (use_form) {
-            var template = use_form ? this.form_template : this.template;
-
+        render: function (edit) {
+            var template = edit ? this.form_template : this.template;
 
             // render entity details
             var m = this.model.toJSON();
             $(this.el).html(template(m));
-            $('#entity-ip-addresses').html(this.iptemplate(m));
-            $('#entity-metadata').html(this.metadatatemplate(m));
+
+            // render IP addresses
+            if(!this._ip_addresses_view) {
+                this._ip_addresses_view = new EntityIPDetailsView({model: this.model});
+            }
+            $('#entity-ipaddresses').empty();
+            $('#entity-ipaddresses').append(this._ip_addresses_view.render(edit));
+
+            // render metadata
+            if(!this._metadata_view) {
+                this._metadata_view = new EntityMetadataDetailsView({model: this.model});
+            }
+            $('#entity-metadata').empty();
+            $('#entity-metadata').append(this._metadata_view.render(edit));
 
             // render check list
             var cl = $("#entity-checks-list");
             cl.html("<tr><td>LOADING CHECKS</td></tr>");
             this.model.checks.fetch({"success": this.renderCheckListSuccess, "error": this.renderCheckListFail});
         }
+
     });
 
 
     /* This should be bound to a model, so updates should rerender correctly */
     var EntityView = Backbone.View.extend({
         tagName: 'tr',
-        template: _.template("<td><a class='details'><%= label %></a></td><td><%= id %></td><td><i class='icon-remove delete'></i></td>"),
+        template: _.template("<td><a class='details clickable'><%= label %></a></td><td><%= id %></td><td><i class='icon-remove delete clickable'></i></td>"),
         events: {"click .details": "detailsHandler",
                  "click .delete": 'deleteHandler'},
 
@@ -218,7 +364,6 @@ define([
         },
 
         render: function() {
-            $(this.el).addClass('clickable');
             $(this.el).html(this.template(this.model.toJSON()));
             return this;
         }
@@ -245,12 +390,10 @@ define([
             function saveSuccess(entity) {
                 entity.fetch({
                     success: function(e) {
-                        $('#new-entity-modal').modal('hide', function() {$("#new-entity-save-button").removeAttr('disabled');});
+                        $('#new-entity-modal').modal('hide');
                         App.getInstance().account.entities.add(e);
                         window.location.hash = 'entities/' + e.id;
                     }, error: function(e) {
-                        $("#new-entity-save-button").removeAttr('disabled');
-
                         $('#entity-label-input-error').empty();
                         $('#entity-label-input-control-group').addClass('error');
                         $('#entity-label-input-error').html("Error fetching new entity");
@@ -300,13 +443,20 @@ define([
     var renderEntityDetails = function (id) {
         Views.renderView('entity-details');
 
+        // These control elements don't really live under the main entity details view, but they are modified by it. This resets everything each time a new
+        // entity is rendered. (This should probably be changed.)
+        $('#entityalert').empty();
+        $('#edit-entity-button').show();
+        $('#save-entity-button').hide();
+        $('#cancel-entity-button').hide();
+
         var model = App.getInstance().account.entities.get(id);
         if (!model) {
             window.location.hash = 'entities';
             return;
         }
 
-        entityDetailsView = new EntityDetailsView({"model": model});
+        var entityDetailsView = new EntityDetailsView({"model": model});
         entityDetailsView.render();
     };
 
