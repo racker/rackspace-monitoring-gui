@@ -328,127 +328,59 @@ define([
 
     });
 
-
-    /* This should be bound to a model, so updates should rerender correctly */
-    var EntityView = Backbone.View.extend({
-        tagName: 'tr',
+    var EntityView = Views.ListElementView.extend({
         template: _.template("<td><a class='details clickable'><%= label %></a></td><td><%= id %></td><td><i class='icon-remove delete clickable'></i></td>"),
-        events: {"click .details": "detailsHandler",
-                 "click .delete": 'deleteHandler'},
 
         detailsHandler: function () {
             window.location.hash = 'entities/' + this.model.id;
         },
 
         deleteHandler: function () {
-            function deleteEntity() {
-                console.log("delete");
-                this.model.destroy();
-                $("#delete-entity-confirm-button").off('click');
-                $('#delete-entity-modal').modal('hide');
-            }
-
-            function cancelDelete() {
-                $("#delete-entity-confirm-button").off('click');
-                $('#delete-entity-modal').modal('hide');
-            }
-
-            var delete_button = $("<button>").addClass('btn btn-primary delete').append("Delete");
-            var cancel_button = $("<button>").addClass('btn cancel').append("Cancel");
-
-            $("#delete-entity-modal-header").empty().append("Confirm Deletion of " + this.model.get('label'));
-            $("#delete-entity-confirm-button").on('click', $.throttle( 250, deleteEntity.bind(this)));
-            $("#delete-entity-cancel-button").on('click', cancelDelete);
-
-            $('#delete-entity-modal').modal('show');
-        },
-
-        render: function() {
-            $(this.el).html(this.template(this.model.toJSON()));
-            return this;
+            this.model.destroy();
+            this._modal.hide();
         }
     });
 
-    /* TODO - Ideally this is bound to the collection so updates happen automatically */
-    var EntitiesView = Backbone.View.extend({
-        el: $('#entity-list'),
-        events: {},
+    var EntityListView = Views.ListView.extend({
 
-        initialize: function() {
-            this.collection.on('change', this.render.bind(this));
-            this.collection.on('add', this.render.bind(this));
-            this.collection.on('remove', this.render.bind(this));
-            $('#new-entity-button').on('click', this.handleNew.bind(this));
-            $('#new-entity-save-button').on('click', this.handleSave.bind(this));
-        },
+        name: 'entity',
+        plural: 'entities',
+        elementView: EntityView,
 
-        handleNew: function() {
-            $('#new-entity-modal').modal('show');
-        },
+        handleNew: function (label) {
 
-        handleSave: function() {
             function saveSuccess(entity) {
                 entity.fetch({
                     success: function(e) {
-                        $('#new-entity-modal').modal('hide');
+                        this._modal.hide();
                         App.getInstance().account.entities.add(e);
                         window.location.hash = 'entities/' + e.id;
-                    }, error: function(e) {
-                        $('#entity-label-input-error').empty();
-                        $('#entity-label-input-control-group').addClass('error');
-                        $('#entity-label-input-error').html("Error fetching new entity");
-                    }
+                    }.bind(this), error: function(e) {
+                        this.error('Error fetching ' + this.name);
+                        this._modal.hide();
+                    }.bind(this)
                 });
             }
 
             function saveError(graph, response) {
-                $("#new-entity-save-button").removeAttr('disabled');
                 try {
                     r = JSON.parse(response.responseText);
                 } catch (e) {
                     r = {'name': 'UnknownError', 'message': 'UnknownError: An unknown error occured.'};
                 }
-
-                $('#entity-label-input-error').empty();
-                $('#entity-label-input-control-group').addClass('error');
-                $('#entity-label-input-error').html(r.message);
+                this.error(r.message);
+                this._modal.hide();
             }
-
-            $("#new-entity-save-button").attr('disabled', 'disabled');
-            var label = $('#entity-label-input').val();
-
             e = new Models.Entity({label: label});
-            e.save({}, {success: saveSuccess.bind(this), error: saveError});
-        },
-
-        render: function()
-        {
-            $(this.el).empty();
-            this.collection.each(function (m) {
-                this.add(m);
-            }.bind(this));
-            return this;
-        },
-
-        add: function(m)
-        {
-            var e = new EntityView({
-                model: m
-            });
-            e.render();
-            $(this.el).append(e.el);
+            e.save({}, {success: saveSuccess.bind(this), error: saveError.bind(this)});
         }
+
     });
 
     var renderEntityDetails = function (id) {
         Views.renderView('entity-details');
 
-        // These control elements don't really live under the main entity details view, but they are modified by it. This resets everything each time a new
-        // entity is rendered. (This should probably be changed.)
-        $('#entityalert').empty();
-        $('#edit-entity-button').show();
-        $('#save-entity-button').hide();
-        $('#cancel-entity-button').hide();
+        $('entities').empty();
 
         var model = App.getInstance().account.entities.get(id);
         if (!model) {
@@ -461,10 +393,11 @@ define([
     };
 
     var renderEntitiesList = function () {
-        Views.renderView('entities');
+        $('entities').empty();
+        Views.renderView('entity-details');
 
         if (!entitiesView) {
-            entitiesView = new EntitiesView({collection: App.getInstance().account.entities});
+            entitiesView = new EntityListView({el: $('#entities'), collection: App.getInstance().account.entities});
         }
         entitiesView.render();
     };
