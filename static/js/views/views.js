@@ -10,6 +10,125 @@ define([
     var checkDetailsView, alarmDetailsView;
 
     /**
+     * Generic Key Value Object View
+     * @extends Backbone.View
+     *
+     * @param {object} opts Options Object
+     * @param {Backbone.Model} opts.model Backbone model instance
+     * @param {String} opts.modelKey render this.model.get(modelKey) instead
+     * @param {Array[String]} opts.editableKeys list of keys that are editable
+     * @param {Boolean} opts.editKeys Allow editing of keys AND values
+     * @param {Object} opts.formatters Map of object attributes to functions
+     */
+    var KeyValueView = Backbone.View.extend({
+        keyValueTemplate: _.template(
+            "<dt><strong><%= key %></strong></dt>" +
+            "<dd><%= value %></dd>"
+        ),
+        
+        editKeyValueTemplate: _.template(
+            "<dt><input class='key', type='text' name='<%= key %>', value='<%= key %>'></dt>" +
+            "<dd><input class='value', type='text' name='<%= value %>', value='<%= value %>'></dd>"
+        ),
+
+        editValueTemplate: _.template(
+            "<dt><strong><%= key %></strong></dt>" +
+            "<dd><input class='value', type='text' name='<%= value %>', value='<%= value %>'></dd>"
+        ),
+        
+        newKeyValueTemplate: _.template(
+            "<dt><input class='key', type='text'></dt>" +
+            "<dd><input class='value', type='text'></dd>"
+        ),
+
+        initialize: function (opts) {
+            this.modelKey = this.modelKey || opts.modelKey;
+            this.editableKeys = this.editableKeys || opts.editableKeys || [];
+            this.editKeys = this.editKeys || opts.editKeys || false;
+            this.ignoredKeys = this.ignoredKeys || opts.ignoredKeys || [];
+            this.formatters = this.formatters || opts.formatters || {};
+        },
+
+        handleNew: function (e) {
+            if (e) {
+                $(e.target.parentElement.parentElement).off('click');
+            }
+            var newrow = $('<div>').append(this.newKeyValueTemplate()).on('click', function (e) {
+                this.handleNew(e);
+            }.bind(this));
+            this.$el.append(newrow);
+        },
+
+        getValues: function () {
+            var labels = $(this.el).find('.key');
+            var values = $(this.el).find('.value');
+
+            var r = _.reduce(labels, function(memo, label, index, labels) {
+
+                var l = label.value;
+                var v = values[index] ? values[index].value : null;
+
+                if (l && v) {
+                    memo[l] = v;
+                }
+                return memo;
+            }, {});
+
+            return r;
+        },
+
+        _format: function (value, key) {
+            if (_.contains(_.keys(this.formatters), key)) {
+                return this.formatters[key](value);
+            }
+            return value;
+        },
+
+        render: function (edit) {
+            
+            var m = this.modelKey ? this.model.get(this.modelKey) : this.model.toJSON();
+
+            this.$el.empty();
+            _.each(m, function (value, key) {
+                var row;
+
+                // This should not be rendered.
+                if (_.contains(this.ignoredKeys, key)) {
+                    return;
+                }
+
+                if(edit) {
+
+                    // We want to edit keys and values, but don't specify specific keys.
+                    // (ip_addresses, metadata, etc)
+                    if (this.editKeys && _.isEmpty(this.editableKeys)) {
+                        row = this.editKeyValueTemplate({key:key, value:value});
+                    }
+                    // We do not want to edit keys, just the values
+                    // (label, agent_id, etc)
+                    else if (_.contains(this.editableKeys, key)) {
+                        row = this.editValueTemplate({key:key, value:value});
+                    }
+                    // This is rendered, but uneditable
+                    // (created_at, uri, etc)
+                    else {
+                        row = this.keyValueTemplate({key: key, value: value});
+                    }
+                } else {
+                    row = this.keyValueTemplate({key:key, value:this._format(value, key)});
+                }
+                this.$el.append(row);
+            }.bind(this));
+
+            if (edit && this.editKeys) {
+                this.handleNew();
+            }
+
+            return this.$el;
+        }
+    });
+
+    /**
      * Generic List Element View
      * Suitable for use with ListView
      * @extends Backbone.View
@@ -459,7 +578,10 @@ define([
         _renderView('error');
     };
 
-    return {Modal: Modal, ListView: ListView, ListElementView: ListElementView,
+    return {Modal: Modal,
+            ListView: ListView,
+            ListElementView: ListElementView,
+            KeyValueView: KeyValueView,
             'renderCheckDetails': renderCheckDetails,
             'renderAlarmDetails': renderAlarmDetails,
             'renderAccount': renderAccount,

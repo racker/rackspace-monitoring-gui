@@ -5,8 +5,9 @@ define([
   'app',
   'models/models',
   'views/views',
+  'templates/entities',
   'jquerydebounce'
-], function($, Backbone, _, App, Models, Views) {
+], function($, Backbone, _, App, Models, Views, Templates) {
 
     var entitiesView;
 
@@ -47,171 +48,95 @@ define([
         }
     });
 
-    var EntityMetadataDetailsView = Backbone.View.extend({
-        tagName: "dl",
-        className: "dl-horizontal",
-        metadatatemplate: _.template(
-            "<% _.each(metadata, function(value, key) { %>" +
-                "<dt><strong><%= key %></strong></dt>" +
-                "<dd><%= value %></dd>" +
-            "<% }); %>"
-        ),
-        form_metadatatemplate: _.template(
-            "<% _.each(metadata, function(value, key) { %>" +
-                "<dt><input class='metadata_label', type='text' name='<%= key %>', value='<%= key %>'></dt>" +
-                "<dd><input class='metadata_value', type='text' name='<%= value %>', value='<%= value %>'></dd>" +
-            "<% }); %>"
-        ),
-        new_template: _.template(
-            "<dt><input class='metadata_label', type='text', placeholder='key'></dt>" +
-            "<dd><input class='metadata_value', type='text', placeholder='value'></dd>"
-        ),
-
-        handleNew: function (e) {
-            if (e) {
-                $(e.target.parentElement.parentElement).off('click');
-            }
-            var newmetadata = $('<div>').append(this.new_template()).on('click', function (e) {
-                this.handleNew(e);
-            }.bind(this));
-            this.$el.append(newmetadata);
-
-        },
-
-        getValues: function () {
-            var labels = $(this.el).find('.metadata_label');
-            var values = $(this.el).find('.metadata_value');
-
-            var r = _.reduce(labels, function(memo, label, index, labels) {
-
-                var l = label.value;
-                var v = values[index] ? values[index].value : null;
-
-                if (l && v) {
-                    memo[l] = v;
-                }
-                return memo;
-            }, {});
-
-            return r;
-        },
-
-        render: function (edit) {
-            
-            this.$el.empty();
-            var metadatatemplate = edit ? this.form_metadatatemplate: this.metadatatemplate;
-            this.$el.append(metadatatemplate(this.model.toJSON()));
-
-            if (edit) {
-                this.handleNew();
-            }
-
-            return this.$el;
-        }
-    });
-
-
-    var EntityIPDetailsView = Backbone.View.extend({
-        tagName: "dl",
-        className: "dl-horizontal",
-        iptemplate: _.template(
-            "<% _.each(ip_addresses, function(value, key) { %>" +
-                "<dt><strong><%= key %></strong></dt>" +
-                "<dd><%= value %></dd>" +
-            "<% }); %>"
-        ),
-        form_iptemplate: _.template(
-            "<% _.each(ip_addresses, function(value, key) { %>" +
-                "<dt><input class='ip_label', type='text' name='<%= key %>', value='<%= key %>'></dt>" +
-                "<dd><input class='ip_value', type='text' name='<%= value %>', value='<%= value %>'></dd>" +
-            "<% }); %>"
-        ),
-        new_template: _.template(
-            "<dt><input class='ip_label', type='text', placeholder='ip_label'></dt>" +
-            "<dd><input class='ip_value', type='text', placeholder='0.0.0.0'></dd>"
-        ),
-
-        handleNew: function (e) {
-            if (e) {
-                $(e.target.parentElement.parentElement).off('click');
-            }
-            var newip = $('<div>').append(this.new_template()).on('click', function (e) {
-                this.handleNew(e);
-            }.bind(this));
-            this.$el.append(newip);
-
-        },
-
-        getValues: function () {
-            var labels = $(this.el).find('.ip_label');
-            var values = $(this.el).find('.ip_value');
-
-            var r = _.reduce(labels, function(memo, label, index, labels) {
-
-                var l = label.value;
-                var v = values[index] ? values[index].value : null;
-
-                if (l && v) {
-                    memo[l] = v;
-                }
-                return memo;
-            }, {});
-
-            return r;
-        },
-
-        render: function (edit) {
-            
-            this.$el.empty();
-            var iptemplate = edit ? this.form_iptemplate: this.iptemplate;
-            this.$el.append(iptemplate(this.model.toJSON()));
-
-            if (edit) {
-                this.handleNew();
-            }
-
-            return this.$el;
-        }
-    });
-
     var EntityDetailsView = Backbone.View.extend({
-        el: $('#entity-details'),
         _pre_save_cache: {},
 
         _ip_addresses_view: null,
         _metadata_view: null,
 
-        template: _.template(
-            "<dt><strong>label</strong></dt><dd><%= label %></dd>" +
-            "<dt><strong>agent id</strong></dt><dd><%= agent_id %></dd>" +
-            "<dt><strong>created at</strong></dt><dd><% print(new Date(created_at)); %></dd>" +
-            "<dt><strong>managed</strong></dt><dd><%= managed %></dd>" +
-            "<dt><strong>uri</strong></dt><dd><%= uri %></dd>"
-        ),
-        form_template: _.template(
-            "<dt><strong>label</strong></dt><dd><input type='text' name='label', value='<%= label %>'></dd>" +
-            "<dt><strong>agent id</strong></dt><dd><input type='text' name='agent_id', value='<%= agent_id %>'></dd>" +
-            "<dt><strong>created at</strong></dt><dd><% print(new Date(created_at)); %></dd>" +
-            "<dt><strong>managed</strong></dt><dd><%= managed %></dd>" +
-            "<dt><strong>uri</strong></dt><dd><%= uri %></dd>"
-        ),
-        errortemplate: _.template(
-            "<div class='alert alert-error'>" +
-                "<button type='button' class='close' data-dismiss='alert'>×</button>" +
-                "<h4><%= message %></h4>" +
-                "<%= details %>" +
-            "</div>"
-        ),
-
         initialize: function () {
-            $('#edit-entity-button').off('click');
-            $('#save-entity-button').off('click');
-            $('#cancel-entity-button').off('click');
+            
+            // div for inserting errors
+            this._errors = $('<div>');
 
-            $('#edit-entity-button').on('click', this.handleEdit.bind(this));
-            $('#save-entity-button').on('click', this.handleSave.bind(this));
-            $('#cancel-entity-button').on('click', this.handleCancel.bind(this));
+            // header (title and control buttons)
+            this._header = this._makeHeader();
+            this._body = $('<div>');
+
+            // body
+            this._body.append($('<h3>').append('details'));
+            this._details = $('<dl>').addClass('dl-horizontal');
+            this._body.append(this._details);
+
+            this._body.append($('<h3>').append('ip_addresses'));
+            this._ipAddresses = $('<dl>').addClass('dl-horizontal');
+            this._body.append(this._ipAddresses);
+
+            this._body.append($('<h3>').append('metadata'));
+            this._metadata = $('<dl>').addClass('dl-horizontal');
+            this._body.append(this._metadata);
+
+            this._detailsView = new Views.KeyValueView({
+                el: this._details,
+                model: this.model,
+                editKeys: false,
+                editableKeys: ['label', 'agent_id'],
+                ignoredKeys: ['ip_addresses', 'metadata'],
+                formatters: {created_at: function (val) {return (new Date(val));},
+                             updated_at: function (val) {return (new Date(val));}}
+            });
+
+            this._ipAddressesView = new Views.KeyValueView({
+                el: this._ipAddresses,
+                modelKey: 'ip_addresses',
+                model: this.model,
+                editKeys: true
+            });
+
+            this._metadataView = new Views.KeyValueView({
+                el: this._metadata,
+                modelKey: 'metadata',
+                model: this.model,
+                editKeys: true
+            });
+
+            $(this.el).append(this._errors);
+            $(this.el).append(this._header);
+            $(this.el).append(this._body);
             this.model.on('change', this.render.bind(this));
+        },
+
+        _makeHeader: function () {
+            var saveButton, editButton, cancelButton, header;
+           
+            editButton = $('<i>')
+                .addClass('icon-pencil clickable')
+                .tooltip({placement: 'right', title: 'edit'});
+            editButton.on('click', this.handleEdit.bind(this));
+
+            saveButton = $('<i>')
+                .addClass('icon-ok clickable')
+                .tooltip({placement: 'right', title: 'save changes'});
+            saveButton.on('click', this.handleSave.bind(this));
+
+            cancelButton = $('<i>')
+                .addClass('icon-remove clickable')
+                .tooltip({placement: 'right', title: 'cancel'});
+            cancelButton.on('click', this.handleCancel.bind(this));
+
+            header = $('<div>')
+                        .addClass('row-fluid')
+                        .append(
+                            $('<div>').addClass('span12')
+                                .append($('<h2>').addClass('pull-left').append(this.getTitle()))
+                                .append(editButton)
+                                .append(saveButton)
+                                .append(cancelButton));
+            return header;
+        },
+
+        getTitle: function () {
+            return this.model.get('label');
         },
 
         handleSave: function () {
@@ -272,64 +197,25 @@ define([
         },
 
         handleCancel: function () {
-            this.render(false);
-            $('#edit-entity-button').show();
-            $('#save-entity-button').hide();
-            $('#cancel-entity-button').hide();
-
+            this.render();
         },
 
         handleEdit: function () {
             this.render(true);
-            $('#edit-entity-button').hide();
-            $('#save-entity-button').show();
-            $('#cancel-entity-button').show();
-        },
-
-        renderCheckListSuccess: function (checks, response) {
-            var clv = new CheckListView();
-            clv.render();
-            checks.each(function (check) {
-                clv.add(check);
-            });
-        },
-
-        renderCheckListFail: function (checks, response) {
-            var cl = $("#entity-checks-list");
-            cl.html("<tr><td>Failed Loading Checks</td></tr>");
         },
 
         render: function (edit) {
-            var template = edit ? this.form_template : this.template;
-
-            // render entity details
-            var m = this.model.toJSON();
-            $(this.el).html(template(m));
-
-            // render IP addresses
-            if(!this._ip_addresses_view) {
-                this._ip_addresses_view = new EntityIPDetailsView({model: this.model});
-            }
-            $('#entity-ipaddresses').empty();
-            $('#entity-ipaddresses').append(this._ip_addresses_view.render(edit));
-
-            // render metadata
-            if(!this._metadata_view) {
-                this._metadata_view = new EntityMetadataDetailsView({model: this.model});
-            }
-            $('#entity-metadata').empty();
-            $('#entity-metadata').append(this._metadata_view.render(edit));
-
-            // render check list
-            var cl = $("#entity-checks-list");
-            cl.html("<tr><td>LOADING CHECKS</td></tr>");
-            this.model.checks.fetch({"success": this.renderCheckListSuccess, "error": this.renderCheckListFail});
+            this._detailsView.render(edit);
+            this._ipAddressesView.render(edit);
+            this._metadataView.render(edit);
+           //this.model.checks.fetch({"success": this.renderCheckListSuccess, "error": this.renderCheckListFail});
         }
 
     });
 
     var EntityView = Views.ListElementView.extend({
-        template: _.template("<td><a class='details clickable'><%= label %></a></td><td><%= id %></td><td><i class='icon-remove delete clickable'></i></td>"),
+
+        template: Templates.row_entitytemplate,
 
         detailsHandler: function () {
             window.location.hash = 'entities/' + this.model.id;
@@ -378,9 +264,7 @@ define([
     });
 
     var renderEntityDetails = function (id) {
-        Views.renderView('entity-details');
-
-        $('entities').empty();
+        $('#entities').empty();
 
         var model = App.getInstance().account.entities.get(id);
         if (!model) {
@@ -388,16 +272,15 @@ define([
             return;
         }
 
-        var entityDetailsView = new EntityDetailsView({"model": model});
+        var entityDetailsView = new EntityDetailsView({el: $("#entities"), "model": model});
         entityDetailsView.render();
     };
 
     var renderEntitiesList = function () {
-        $('entities').empty();
-        Views.renderView('entity-details');
+        $('#entities').empty();
 
         if (!entitiesView) {
-            entitiesView = new EntityListView({el: $('#entities'), collection: App.getInstance().account.entities});
+            entitiesView = new EntityListView({el: $("#entities"), collection: App.getInstance().account.entities});
         }
         entitiesView.render();
     };
