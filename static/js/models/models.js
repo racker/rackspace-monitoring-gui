@@ -126,6 +126,7 @@ define([
         initialize: function() {
             this.graphs = new AccountSavedGraphCollection([]);
             this.entities = nestCollection(this, 'entities', new AccountEntityCollection([], {account: this}));
+            this.check_types = nestCollection(this, 'check_types', new CheckTypeCollection([]));
         }
     });
 
@@ -378,6 +379,19 @@ define([
         });
         return new C();
     }
+
+    var CheckType = Backbone.Model.extend({
+        urlRoot: function() {
+            return BASE_URL + '/check_types/' + this.id;
+        }
+    });
+
+    var CheckTypeCollection = Backbone.Collection.extend({
+            model: CheckType,
+            url: function() {
+                return BASE_URL + '/check_types';
+            }
+    });
 
     return {'Account': Account,
             'Entity': Entity,

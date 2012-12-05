@@ -23,19 +23,19 @@ define([
     var KeyValueView = Backbone.View.extend({
         keyValueTemplate: _.template(
             "<dt><strong><%= key %></strong></dt>" +
-            "<dd><%= value %></dd>"
+            "<dd><%= value %>&nbsp;</dd>"
         ),
-        
+
         editKeyValueTemplate: _.template(
             "<dt><input class='key', type='text' name='<%= key %>', value='<%= key %>'></dt>" +
             "<dd><input class='value', type='text' name='<%= value %>', value='<%= value %>'></dd>"
         ),
 
         editValueTemplate: _.template(
-            "<dt><strong><%= key %></strong></dt>" +
+            "<dt><strong class='key'><%= key %></strong></dt>" +
             "<dd><input class='value', type='text' name='<%= value %>', value='<%= value %>'></dd>"
         ),
-        
+
         newKeyValueTemplate: _.template(
             "<dt><input class='key', type='text'></dt>" +
             "<dd><input class='value', type='text'></dd>"
@@ -59,13 +59,17 @@ define([
             this.$el.append(newrow);
         },
 
+        resetState: function() {
+            this.render(false);
+        },
+
         getValues: function () {
             var labels = $(this.el).find('.key');
-            var values = $(this.el).find('.value');
+            var values = $(this.el).find('input.value');
 
             var r = _.reduce(labels, function(memo, label, index, labels) {
 
-                var l = label.value;
+                var l = label.value || label.innerText;
                 var v = values[index] ? values[index].value : null;
 
                 if (l && v) {
@@ -77,15 +81,28 @@ define([
             return r;
         },
 
+        getChanged: function() {
+            var values = this.getValues();
+
+            var changedKeys = _.reject(_.keys(values), function (key) {
+                return (this.model.get(key) == values[key]);
+            }.bind(this));
+
+            return _.pick(values, changedKeys);
+        },
+
         _format: function (value, key) {
             if (_.contains(_.keys(this.formatters), key)) {
-                return this.formatters[key](value);
+                value = this.formatters[key](value);
+            }
+            if(!value) {
+                value = '';
             }
             return value;
         },
 
         render: function (edit) {
-            
+
             var m = this.modelKey ? this.model.get(this.modelKey) : this.model.toJSON();
 
             this.$el.empty();
@@ -102,17 +119,17 @@ define([
                     // We want to edit keys and values, but don't specify specific keys.
                     // (ip_addresses, metadata, etc)
                     if (this.editKeys && _.isEmpty(this.editableKeys)) {
-                        row = this.editKeyValueTemplate({key:key, value:value});
+                        row = this.editKeyValueTemplate({key:key, value:this._format(value, key)});
                     }
                     // We do not want to edit keys, just the values
                     // (label, agent_id, etc)
                     else if (_.contains(this.editableKeys, key)) {
-                        row = this.editValueTemplate({key:key, value:value});
+                        row = this.editValueTemplate({key:key, value:this._format(value, key)});
                     }
                     // This is rendered, but uneditable
                     // (created_at, uri, etc)
                     else {
-                        row = this.keyValueTemplate({key: key, value: value});
+                        row = this.keyValueTemplate({key: key, value: this._format(value, key)});
                     }
                 } else {
                     row = this.keyValueTemplate({key:key, value:this._format(value, key)});
@@ -201,9 +218,13 @@ define([
             $(this.el).append(this._body);
 
             // events
+            this.collection.on('sync', this.render.bind(this));
             this.collection.on('change', this.render.bind(this));
             this.collection.on('add', this.render.bind(this));
             this.collection.on('remove', this.render.bind(this));
+            this.collection.on('reset', this.render.bind(this));
+
+            this.render();
 
         },
 
@@ -272,6 +293,106 @@ define([
         }
     });
 
+
+    /**
+     * Generic Details View
+     * @extends Backbone.View
+     *
+     * @param {object} opts Options Object
+     * @param {Backbone.Collection} opts.collection Backbone collection instance
+     * @param {Bacbone.View} opts.elementView Backbone View class for rendering collection elements
+     * @param {jQuery object} opts.el Parent Element Selector
+     */
+    var DetailsView = Backbone.View.extend({
+
+        /* Are we in the edit state? */
+        editState: false,
+
+        initialize: function () {
+            // div for inserting errors
+            this._errors = $('<div>');
+
+            this._header = this._makeHeader();
+            this._body = this._makeBody();
+
+            $(this.el).append(this._errors);
+            $(this.el).append(this._header);
+            $(this.el).append(this._body);
+            this.model.on('change', this.render.bind(this));
+        },
+
+        _makeHeader: function () {
+            this._editButton = $('<i>')
+                .addClass('icon-pencil clickable')
+                .tooltip({placement: 'right', title: 'edit'});
+            this._editButton.on('click', $.throttle(250, this.handleEdit.bind(this)));
+
+            this._saveButton = $('<i>')
+                .addClass('icon-ok clickable')
+                .tooltip({placement: 'right', title: 'save changes'})
+                .hide();
+            this._saveButton.on('click', $.throttle(250, this.handleSave.bind(this)));
+
+            this._cancelButton = $('<i>')
+                .addClass('icon-remove clickable')
+                .tooltip({placement: 'right', title: 'cancel'})
+                .hide();
+            this._cancelButton.on('click', $.throttle(250, this.handleCancel.bind(this)));
+
+            return $('<div>')
+                        .addClass('row-fluid')
+                        .append(
+                            $('<div>').addClass('span12')
+                                .append($('<h2>').addClass('pull-left').append(this.getTitle()))
+                                .append(this._editButton)
+                                .append(this._saveButton)
+                                .append(this._cancelButton));
+        },
+
+        _makeBody: function() {
+            return $('<div>');
+        },
+
+        getTitle: function () {
+            return this.model.get('label');
+        },
+
+        handleSave: function () {},
+
+        handleCancel: function () {
+            this.editState = false;
+            this.render();
+        },
+
+        handleEdit: function () {
+            this.editState = true;
+            this.render();
+        },
+
+        displayError: function (message) {
+            var error = $('<div>').addClass('alert alert-error');
+            error.append($('<button>')
+                            .addClass('close')
+                            .attr('data-dismiss', 'alert')
+                            .append('x'));
+            error.append($('<strong>').append(message.message));
+            error.append($('<p>').append(message.details));
+            this._errors.append(error);
+        },
+
+        render: function () {}
+
+    });
+
+
+    var MagicFormView = Backbone.View.extend({
+        initialize: function(opts) {
+
+        },
+
+
+
+    });
 
     /**
      * Generic Modal View
@@ -404,12 +525,12 @@ define([
     var AlarmListView = Backbone.View.extend({
         el: $('#check-alarms-list'),
         events: {},
-    
+
         initialize: function()
         {
             this._cache = {};
         },
-    
+
         render: function()
         {
             $(this.el).empty();
@@ -491,12 +612,12 @@ define([
     var CheckListView = Backbone.View.extend({
         el: $('#entity-checks-list'),
         events: {},
-    
+
         initialize: function()
         {
             this._cache = {};
         },
-    
+
         render: function()
         {
             $(this.el).empty();
@@ -582,6 +703,7 @@ define([
             ListView: ListView,
             ListElementView: ListElementView,
             KeyValueView: KeyValueView,
+            DetailsView: DetailsView,
             'renderCheckDetails': renderCheckDetails,
             'renderAlarmDetails': renderAlarmDetails,
             'renderAccount': renderAccount,

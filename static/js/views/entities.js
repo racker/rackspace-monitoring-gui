@@ -5,11 +5,9 @@ define([
   'app',
   'models/models',
   'views/views',
-  'templates/entities',
+  'views/checks',
   'jquerydebounce'
-], function($, Backbone, _, App, Models, Views, Templates) {
-
-    var entitiesView;
+], function($, Backbone, _, App, Models, Views, CheckViews) {
 
     var CheckView = Backbone.View.extend({
         tagName: 'tr',
@@ -48,33 +46,24 @@ define([
         }
     });
 
-    var EntityDetailsView = Backbone.View.extend({
-        _pre_save_cache: {},
+    var EntityDetailsView = Views.DetailsView.extend({
 
-        _ip_addresses_view: null,
-        _metadata_view: null,
-
-        initialize: function () {
-            
-            // div for inserting errors
-            this._errors = $('<div>');
-
-            // header (title and control buttons)
-            this._header = this._makeHeader();
-            this._body = $('<div>');
-
-            // body
-            this._body.append($('<h3>').append('details'));
+        _makeBody: function() {
+            var body = $('<div>');
+            body.append($('<h3>').append('details'));
             this._details = $('<dl>').addClass('dl-horizontal');
-            this._body.append(this._details);
+            body.append(this._details);
 
-            this._body.append($('<h3>').append('ip_addresses'));
+            body.append($('<h3>').append('ip_addresses'));
             this._ipAddresses = $('<dl>').addClass('dl-horizontal');
-            this._body.append(this._ipAddresses);
+            body.append(this._ipAddresses);
 
-            this._body.append($('<h3>').append('metadata'));
+            body.append($('<h3>').append('metadata'));
             this._metadata = $('<dl>').addClass('dl-horizontal');
-            this._body.append(this._metadata);
+            body.append(this._metadata);
+
+            this._checks = $('<div>');
+            body.append(this._checks);
 
             this._detailsView = new Views.KeyValueView({
                 el: this._details,
@@ -100,60 +89,18 @@ define([
                 editKeys: true
             });
 
-            $(this.el).append(this._errors);
-            $(this.el).append(this._header);
-            $(this.el).append(this._body);
-            this.model.on('change', this.render.bind(this));
-        },
+            this._checksView = new CheckViews.CheckListView({el: this._checks, collection: this.model.checks});
 
-        _makeHeader: function () {
-            var saveButton, editButton, cancelButton, header;
-           
-            editButton = $('<i>')
-                .addClass('icon-pencil clickable')
-                .tooltip({placement: 'right', title: 'edit'});
-            editButton.on('click', this.handleEdit.bind(this));
-
-            saveButton = $('<i>')
-                .addClass('icon-ok clickable')
-                .tooltip({placement: 'right', title: 'save changes'});
-            saveButton.on('click', this.handleSave.bind(this));
-
-            cancelButton = $('<i>')
-                .addClass('icon-remove clickable')
-                .tooltip({placement: 'right', title: 'cancel'});
-            cancelButton.on('click', this.handleCancel.bind(this));
-
-            header = $('<div>')
-                        .addClass('row-fluid')
-                        .append(
-                            $('<div>').addClass('span12')
-                                .append($('<h2>').addClass('pull-left').append(this.getTitle()))
-                                .append(editButton)
-                                .append(saveButton)
-                                .append(cancelButton));
-            return header;
-        },
-
-        getTitle: function () {
-            return this.model.get('label');
+            return body;
         },
 
         handleSave: function () {
-
-            // MaaS doesn't return model content on error, so we need to keep track of stuff
-            // we tried to change and put it back if the save fails.
-            var changed = {};
-            var _cache = {};
-
             var _success = function (model) {
-                model.change();
-                this.render();
-                this.handleCancel();
+                this.editState = false;
+                this.model.fetch();
             };
 
             var _error = function (model, xhr) {
-
                 var error = {message: 'Unknown Error', details: 'Try again later'};
                 try {
                     var r = JSON.parse(xhr.responseText);
@@ -161,61 +108,41 @@ define([
                     error.details = r.details;
                 } catch (e) {}
 
-                $('#entityalert').html(this.errortemplate(error));
-
-                this.model.set(_cache);
-                this.render(true);
+                this.displayError(error);
+                this.model.fetch();
             };
 
-            _.each($(this.el).find('input'), function (input) {
-                var original_value = this.model.get(input.name);
-                var new_value = input.value;
+            var newEntity = this._detailsView.getChanged();
 
-                if (original_value !== new_value) {
-                    _cache[input.name] = original_value;
-                    changed[input.name] = new_value;
-                }
-            }.bind(this));
+            newEntity.ip_addresses = this._ipAddressesView.getValues();
+            newEntity.metadata = this._metadataView.getValues();
 
-            var ips = this._ip_addresses_view.getValues();
-            if (!_.isEqual(ips, this.model.get('ip_addresses'))) {
-                _cache['ip_addresses'] = this.model.get('ip_addresses');
-                changed['ip_addresses'] = ips;
-            }
+            this.model.save(newEntity, {success: _success.bind(this), error: _error.bind(this)});
+        },
 
-            var metadata = this._metadata_view.getValues();
-            if (!_.isEqual(metadata, this.model.get('metadata'))) {
-                _cache['metadata'] = this.model.get('metadata');
-                changed['metadata'] = metadata;
-            }
+        render: function () {
+            this._detailsView.render(this.editState);
+            this._ipAddressesView.render(this.editState);
+            this._metadataView.render(this.editState);
 
-            if (!_.isEmpty(changed)) {
-                this.model.save(changed, {success: _success.bind(this), error: _error.bind(this)});
+            this.model.checks.fetch();
+
+            if(this.editState) {
+                this._editButton.hide();
+                this._saveButton.show();
+                this._cancelButton.show();
             } else {
-                this.handleCancel();
+                this._saveButton.hide();
+                this._cancelButton.hide();
+                this._editButton.show();
             }
-        },
-
-        handleCancel: function () {
-            this.render();
-        },
-
-        handleEdit: function () {
-            this.render(true);
-        },
-
-        render: function (edit) {
-            this._detailsView.render(edit);
-            this._ipAddressesView.render(edit);
-            this._metadataView.render(edit);
-           //this.model.checks.fetch({"success": this.renderCheckListSuccess, "error": this.renderCheckListFail});
         }
 
     });
 
     var EntityView = Views.ListElementView.extend({
 
-        template: Templates.row_entitytemplate,
+        template: _.template("<td><a class='details clickable'><%= label %></a></td><td><%= id %></td><td><i class='icon-remove delete clickable'></i></td>"),
 
         detailsHandler: function () {
             window.location.hash = 'entities/' + this.model.id;
@@ -248,7 +175,7 @@ define([
                 });
             }
 
-            function saveError(graph, response) {
+            function saveError(entity, response) {
                 try {
                     r = JSON.parse(response.responseText);
                 } catch (e) {
@@ -279,9 +206,7 @@ define([
     var renderEntitiesList = function () {
         $('#entities').empty();
 
-        if (!entitiesView) {
-            entitiesView = new EntityListView({el: $("#entities"), collection: App.getInstance().account.entities});
-        }
+        var entitiesView = new EntityListView({el: $("#entities"), collection: App.getInstance().account.entities});
         entitiesView.render();
     };
 
