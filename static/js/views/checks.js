@@ -54,9 +54,97 @@ define([
             }
             c = new Models.Check({label: label});
             c.save({}, {success: saveSuccess.bind(this), error: saveError.bind(this)});
+        },
+
+        _makeModal: function () {
+            var modal = new NewCheckModal({collection: App.getInstance().account.check_types,
+                                           onConfirm: this.handleNew.bind(this),
+                                           header: '<h4>Create New ' + this.name+'</h4>'});
+            return modal;
+
         }
 
     });
+
+    var MagicFormView = Backbone.View.extend({
+
+        selectTypeTemplate: _.template(
+            "<option></option>" +
+            "<% _.each(check_types, function(type) { %>" +
+                "<option><%= type.id %></option>" +
+            "<% }); %>"
+        ),
+
+        editTextTemplate: _.template(
+            "<label class='key'><%= key %></strong></label>" +
+            "<input class='value', type='text' name='<%= value %>', placeholder='<%= value %>' />"
+        ),
+
+        editBooleanTemplate: _.template(
+            "<dt><strong class='key'><%= key %></strong></dt>" +
+            "<dd><input class='value', type='text' name='<%= value %>', value='<%= value %>'></dd>"
+        ),
+
+        initialize: function(opts) {
+            this._select = $('<select>');
+            this.$el.append(this._select);
+
+            this._form = $('<div>');
+            this.$el.append(this._form);
+
+            this.collection.fetch({success: this.render.bind(this), error: function() {
+                    this.$el.append("We broke!");
+                }
+            });
+
+            this._select.change(this._handleTypeSelection.bind(this));
+
+        },
+
+        _makeForm: function(type) {
+            var form = $('<form>');
+            _.each(type.get('fields'), function (field) {
+                form.append(this.editTextTemplate({key: field.name, value: field.description}));
+            }.bind(this));
+
+            return form;
+        },
+
+        _handleTypeSelection: function(event) {
+            var checkType = this.collection.get(event.target.value);
+            this._form.empty();
+            this._form.append(this._makeForm(checkType));
+        },
+
+        render: function() {
+            this._select.empty();
+            this._select.html(this.selectTypeTemplate({check_types: this.collection.toJSON()}));
+            return this.$el;
+        }
+    });
+
+    var NewCheckModal = Views.Modal.extend({
+        _makeBody: function () {
+            var body, magicFormView;
+            body = $('<div>').addClass('modal-body');
+
+            magicFormView = new MagicFormView({collection: this.collection});
+
+            body.append(magicFormView.render());
+
+
+            // if (this.body) {
+            //     body.append(_.isFunction(this.body) ? this.body() : this.body || "");
+            // }
+            // if (this.input) {
+            //     input = $('<input>').attr('type', 'text')
+            //                 .attr('placeholder', _.isFunction(this.label) ? this.label() : this.label || "");
+            //     body.append(input);
+            // }
+            return body;
+        }
+    });
+
 
     var renderCheckDetails = function (id) {
         $('#entities').empty();

@@ -28,17 +28,17 @@ define([
 
         editKeyValueTemplate: _.template(
             "<dt><input class='key', type='text' name='<%= key %>', value='<%= key %>'></dt>" +
-            "<dd><input class='value', type='text' name='<%= value %>', value='<%= value %>'></dd>"
+            "<dd><input class='value', type='text' name='<%= value %>', value='<%= value %>' /></dd>"
         ),
 
         editValueTemplate: _.template(
             "<dt><strong class='key'><%= key %></strong></dt>" +
-            "<dd><input class='value', type='text' name='<%= value %>', value='<%= value %>'></dd>"
+            "<dd><input class='value', type='text' name='<%= value %>', value='<%= value %>' /></dd>"
         ),
 
         newKeyValueTemplate: _.template(
             "<dt><input class='key', type='text'></dt>" +
-            "<dd><input class='value', type='text'></dd>"
+            "<dd><input class='value', type='text' /></dd>"
         ),
 
         initialize: function (opts) {
@@ -384,15 +384,6 @@ define([
 
     });
 
-
-    var MagicFormView = Backbone.View.extend({
-        initialize: function(opts) {
-
-        },
-
-
-
-    });
 
     /**
      * Generic Modal View

@@ -387,10 +387,13 @@ define([
     });
 
     var CheckTypeCollection = Backbone.Collection.extend({
-            model: CheckType,
-            url: function() {
-                return BASE_URL + '/check_types';
-            }
+        model: CheckType,
+        url: function() {
+            return BASE_URL + '/check_types';
+        },
+        sync: function(method, model, options) {
+            return depaginatedRequest(this.url()).then(options.success, options.error);
+        }
     });
 
     return {'Account': Account,
