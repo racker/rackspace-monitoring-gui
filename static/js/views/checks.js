@@ -57,7 +57,9 @@ define([
         },
 
         _makeModal: function () {
-            var modal = new NewCheckModal({collection: App.getInstance().account.check_types,
+            var modal = new NewCheckModal({checkTypesCollection: App.getInstance().account.check_types,
+                                           monitoringZonesCollection: App.getInstance().account.monitoring_zones,
+                                           collection: this.collection,
                                            onConfirm: this.handleNew.bind(this),
                                            header: '<h4>Create New ' + this.name+'</h4>'});
             return modal;
@@ -68,6 +70,14 @@ define([
 
     var MagicFormView = Backbone.View.extend({
 
+        booleanFields: ['starttls', 'follow_redirects', 'ssl'],
+
+        selectIpTemplate: _.template(
+            "<% _.each(ip_addresses, function(ip_address, label) { %>" +
+                "<option><%= label %> (<%= ip_address %>)</option>" +
+            "<% }); %>"
+        ),
+
         selectTypeTemplate: _.template(
             "<option></option>" +
             "<% _.each(check_types, function(type) { %>" +
@@ -75,50 +85,115 @@ define([
             "<% }); %>"
         ),
 
+        monitoringZoneTemplate: _.template(
+            "<label class='key'><strong>monitoring_zones</strong></label>" +
+            "<% _.each(monitoring_zones, function(mz) { %>" +
+                "<label class='checkbox'>" +
+                    "<input type='checkbox' name='<%= mz.id %>'>" +
+                    "<%= mz.label %> (<%= mz.id %>)" +
+                "</label>" +
+            "<% }); %>"
+        ),
+
         editTextTemplate: _.template(
-            "<label class='key'><%= key %></strong></label>" +
+            "<label class='key'>" +
+                "<strong><%= key %> </strong><%= optional %>" +
+            "</label>" +
             "<input class='value', type='text' name='<%= value %>', placeholder='<%= value %>' />"
         ),
 
         editBooleanTemplate: _.template(
-            "<dt><strong class='key'><%= key %></strong></dt>" +
-            "<dd><input class='value', type='text' name='<%= value %>', value='<%= value %>'></dd>"
+            "<label class='checkbox'>" +
+                "<input type='checkbox' value=''>" +
+                "<strong><%= key %></strong>" +
+            "</label>"
         ),
 
         initialize: function(opts) {
-            this._select = $('<select>');
-            this.$el.append(this._select);
+            this.checkTypesCollection = opts.checkTypesCollection;
+            this.monitoringZonesCollection = opts.monitoringZonesCollection;
+
+            this._checkTypes = $('<select>');
+            this.$el.append('<label><strong>check_type</strong></label>');
+            this.$el.append(this._checkTypes);
+
+            this.$el.append('<hr/>');
 
             this._form = $('<div>');
             this.$el.append(this._form);
 
-            this.collection.fetch({success: this.render.bind(this), error: function() {
-                    this.$el.append("We broke!");
+            // Monitoring Zones
+            this._monitoringZones = $('<div>');
+
+            //IP
+            this._ipAddresses = $('<select>');
+            this._ipAddressesForm = $('<div>');
+            this._ipAddressesForm.append('<label><strong>ip_address</strong></label>');
+            this._ipAddressesForm.append(this._ipAddresses);
+
+            this.checkTypesCollection.fetch({success: this._populateCheckTypes.bind(this), error: function() {
+                    this.$el.append("Check Types Fetch Failed");
                 }
             });
 
-            this._select.change(this._handleTypeSelection.bind(this));
+            this.monitoringZonesCollection.fetch({success: this._populateMonitoringZones.bind(this), error: function () {
+                this.$el.append("Monitoring Zones Fetch Failed");
+            }});
 
+            this.collection.entity.fetch({success: this._populateIpAddresses.bind(this), error: function () {
+                this.$el.append("Entity Fetch Failed");
+            }});
+
+            this._checkTypes.change(this._handleTypeSelection.bind(this));
+
+        },
+
+        _populateMonitoringZones: function (collection) {
+            this._monitoringZones.empty();
+            this._monitoringZones.html(this.monitoringZoneTemplate({monitoring_zones: this.monitoringZonesCollection.toJSON()}));
+        },
+
+        _populateCheckTypes: function (collection) {
+            this._checkTypes.empty();
+            this._checkTypes.html(this.selectTypeTemplate({check_types: this.checkTypesCollection.toJSON()}));
+        },
+
+        _populateIpAddresses: function (collection) {
+            this._ipAddresses.empty();
+            this._ipAddresses.html(this.selectIpTemplate(this.collection.entity.toJSON()));
         },
 
         _makeForm: function(type) {
             var form = $('<form>');
+
+            if (type.get('type') === 'remote') {
+                this._form.append(this._monitoringZones);
+                this._form.append('<hr/>');
+                this._form.append(this._ipAddresses);
+                this._form.append('<hr/>');
+            }
+
             _.each(type.get('fields'), function (field) {
-                form.append(this.editTextTemplate({key: field.name, value: field.description}));
+                var t = this.editTextTemplate;
+                if (_.indexOf(this.booleanFields, field.name) > -1) {
+                    t = this.editBooleanTemplate;
+                }
+                form.append(t({key: field.name, value: field.description, optional: field.optional ? '(optional)' : ''}));
             }.bind(this));
 
             return form;
         },
 
         _handleTypeSelection: function(event) {
-            var checkType = this.collection.get(event.target.value);
+            var checkType = this.checkTypesCollection.get(event.target.value);
             this._form.empty();
             this._form.append(this._makeForm(checkType));
         },
 
         render: function() {
-            this._select.empty();
-            this._select.html(this.selectTypeTemplate({check_types: this.collection.toJSON()}));
+            this._populateMonitoringZones(this.monitoringZonesCollection);
+            this._populateCheckTypes(this.checkTypesCollection);
+            this._populateIpAddresses(this.collection);
             return this.$el;
         }
     });
@@ -128,7 +203,9 @@ define([
             var body, magicFormView;
             body = $('<div>').addClass('modal-body');
 
-            magicFormView = new MagicFormView({collection: this.collection});
+            magicFormView = new MagicFormView({checkTypesCollection: this.checkTypesCollection,
+                                               monitoringZonesCollection: this.monitoringZonesCollection,
+                                               collection: this.collection});
 
             body.append(magicFormView.render());
 

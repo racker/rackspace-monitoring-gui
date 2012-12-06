@@ -42,6 +42,8 @@ define([
         ),
 
         initialize: function (opts) {
+            this.$el.empty();
+
             this.modelKey = this.modelKey || opts.modelKey;
             this.editableKeys = this.editableKeys || opts.editableKeys || [];
             this.editKeys = this.editKeys || opts.editKeys || false;
@@ -159,6 +161,10 @@ define([
         events: {"click .details": "detailsHandler",
                  "click .delete": "_deleteHandler"},
 
+        initialize: function () {
+            this.$el.empty();
+        },
+
         detailsHandler: function () {
             // Called when link to details page is clicked, navigate elsewhere
         },
@@ -202,18 +208,18 @@ define([
 
         initialize: function(opts) {
 
+            this.$el.empty();
+
             opts = opts || {};
             this.name = this.name || opts.name;
             this.plural = this.plural || opts.plural;
             this.elementView = this.elementView || opts.elementView;
 
             this._errors = $('<div>');
-            this._modal = this._makeModal();
             this._header = this._makeHeader();
             this._body = this._makeBody();
 
             $(this.el).append(this._errors);
-            $(this.el).append(this._modal);
             $(this.el).append(this._header);
             $(this.el).append(this._body);
 
@@ -229,12 +235,21 @@ define([
         },
 
         _makeModal: function () {
-            var modal = new Modal({onConfirm: this.handleNew.bind(this),
+
+            return new Modal({onConfirm: this.handleNew.bind(this),
                                          header: '<h4>Create New ' + this.name+'</h4>',
                                          label: 'Label',
                                          input: true});
-            return modal;
 
+        },
+
+        _showModal: function () {
+            if (this._modal) {
+                this._modal.remove();
+            }
+            this._modal = this._makeModal();
+            this.$el.append(this._modal);
+            this._modal.show();
         },
 
         // Creates Top Row - <h2> and a link to create a new object
@@ -242,7 +257,7 @@ define([
             var createNewLink = $('<i>')
                 .addClass('icon-plus clickable')
                 .tooltip({placement: 'right', title: 'create new'});
-            createNewLink.on('click', this._modal.show.bind(this._modal));
+            createNewLink.on('click', this._showModal.bind(this));
 
             var header = $('<div>')
                 .addClass('row list-header')
@@ -309,6 +324,9 @@ define([
         editState: false,
 
         initialize: function () {
+
+            this.$el.empty();
+
             // div for inserting errors
             this._errors = $('<div>');
 
@@ -399,6 +417,8 @@ define([
 
         initialize: function (opts) {
 
+            this.$el.empty();
+
             // opts
             this.onConfirm = opts.onConfirm;
             this.onCancel = opts.onCancel;
@@ -406,6 +426,10 @@ define([
             this.input = opts.input;
             this.label = opts.label;
             this.body = opts.body;
+
+            // optional
+            this.checkTypesCollection = this.checkTypesCollection || opts.checkTypesCollection;
+            this.monitoringZonesCollection = this.monitoringZonesCollection || opts.monitoringZonesCollection;
 
             // main element
             $(this.el).addClass('modal hide fade');

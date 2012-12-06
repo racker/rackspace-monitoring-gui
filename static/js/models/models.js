@@ -127,6 +127,7 @@ define([
             this.graphs = new AccountSavedGraphCollection([]);
             this.entities = nestCollection(this, 'entities', new AccountEntityCollection([], {account: this}));
             this.check_types = nestCollection(this, 'check_types', new CheckTypeCollection([]));
+            this.monitoring_zones = nestCollection(this, 'monitoring_zones', new MonitoringZoneCollection ([]));
         }
     });
 
@@ -219,6 +220,7 @@ define([
 
     function EntityAlarmCollectionFactory(entity) {
         var C = Backbone.Collection.extend({
+            entity: entity,
             model: Alarm,
             url: function() {
                 return BASE_URL + '/entities/' + entity.get('id') + '/alarms/';
@@ -271,6 +273,7 @@ define([
 
     function EntityCheckCollectionFactory(entity) {
         var C = Backbone.Collection.extend({
+            entity: entity,
             model: Check,
             url: function() {
                 return BASE_URL + '/entities/' + entity.id + '/checks';
@@ -390,6 +393,22 @@ define([
         model: CheckType,
         url: function() {
             return BASE_URL + '/check_types';
+        },
+        sync: function(method, model, options) {
+            return depaginatedRequest(this.url()).then(options.success, options.error);
+        }
+    });
+
+    var MonitoringZone = Backbone.Model.extend({
+        urlRoot: function() {
+            return BASE_URL + '/monitoring_zones/' + this.id;
+        }
+    });
+
+    var MonitoringZoneCollection = Backbone.Collection.extend({
+        model: MonitoringZone,
+        url: function() {
+            return BASE_URL + '/monitoring_zones';
         },
         sync: function(method, model, options) {
             return depaginatedRequest(this.url()).then(options.success, options.error);

@@ -191,7 +191,8 @@ define([
     });
 
     var renderEntityDetails = function (id) {
-        $('#entities').empty();
+
+        Views.renderView('entity-details');
 
         var model = App.getInstance().account.entities.get(id);
         if (!model) {
@@ -199,14 +200,14 @@ define([
             return;
         }
 
-        var entityDetailsView = new EntityDetailsView({el: $("#entities"), "model": model});
+        var entityDetailsView = new EntityDetailsView({el: $("#entity-details-view-content"), "model": model});
         entityDetailsView.render();
     };
 
     var renderEntitiesList = function () {
-        $('#entities').empty();
+        Views.renderView('entity-list');
 
-        var entitiesView = new EntityListView({el: $("#entities"), collection: App.getInstance().account.entities});
+        var entitiesView = new EntityListView({el: $("#entity-list-view-content"), collection: App.getInstance().account.entities});
         entitiesView.render();
     };
 
