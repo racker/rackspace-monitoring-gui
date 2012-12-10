@@ -17,7 +17,7 @@ define([
         },
 
         deleteHandler: function () {
-            this.model.destroy();
+            this.model.destroy({wait: true});
             this._modal.hide();
         }
     });
@@ -28,14 +28,14 @@ define([
         plural: 'checks',
         elementView: CheckView,
 
-        handleNew: function (label) {
+        handleNew: function (newCheck) {
 
             function saveSuccess(check) {
-                entity.fetch({
+                check.fetch({
                     success: function(c) {
                         this._modal.hide();
                         this.collection.add(c);
-                        window.location.hash = 'entities/' + c.entity_id + '/checks/' + c.id;
+                        window.location.hash = 'entities/' + c.get('entity_id') + '/checks/' + c.id;
                     }.bind(this), error: function(e) {
                         this.error('Error fetching ' + this.name);
                         this._modal.hide();
@@ -49,10 +49,11 @@ define([
                 } catch (e) {
                     r = {'name': 'UnknownError', 'message': 'UnknownError: An unknown error occured.'};
                 }
-                this.error(r.message);
+                this.error(r);
                 this._modal.hide();
             }
-            c = new Models.Check({label: label});
+            c = new Models.Check(newCheck);
+            c.set('entity_id', this.collection.entity.id);
             c.save({}, {success: saveSuccess.bind(this), error: saveError.bind(this)});
         },
 
@@ -74,7 +75,7 @@ define([
 
         selectIpTemplate: _.template(
             "<% _.each(ip_addresses, function(ip_address, label) { %>" +
-                "<option><%= label %> (<%= ip_address %>)</option>" +
+                "<option name='<%= label %>' value='<%= label %>'><%= label %> (<%= ip_address %>)</option>" +
             "<% }); %>"
         ),
 
@@ -89,22 +90,20 @@ define([
             "<label class='key'><strong>monitoring_zones</strong></label>" +
             "<% _.each(monitoring_zones, function(mz) { %>" +
                 "<label class='checkbox'>" +
-                    "<input type='checkbox' name='<%= mz.id %>'>" +
+                    "<input type='checkbox' class='monitoring_zones_select' name='<%= mz.id %>'>" +
                     "<%= mz.label %> (<%= mz.id %>)" +
                 "</label>" +
             "<% }); %>"
         ),
 
         editTextTemplate: _.template(
-            "<label class='key'>" +
-                "<strong><%= key %> </strong><%= optional %>" +
-            "</label>" +
-            "<input class='value', type='text' name='<%= value %>', placeholder='<%= value %>' />"
+            "<label><strong><%= key %></strong><%= optional %></label>" +
+            "<input type='text' name='<%= key %>' placeholder='<%= value %>' />"
         ),
 
         editBooleanTemplate: _.template(
             "<label class='checkbox'>" +
-                "<input type='checkbox' value=''>" +
+                "<input name='<%= key %>' type='checkbox' value=''>" +
                 "<strong><%= key %></strong>" +
             "</label>"
         ),
@@ -113,7 +112,13 @@ define([
             this.checkTypesCollection = opts.checkTypesCollection;
             this.monitoringZonesCollection = opts.monitoringZonesCollection;
 
+            // Common Check Attributes
+            this._checkLabel = $('<input type="text" placeholder="Check Label" />');
+            this.$el.append('<label><strong>label</strong></label>');
+            this.$el.append(this._checkLabel);
+
             this._checkTypes = $('<select>');
+            this._checkTypes.change(this._handleTypeSelection.bind(this));
             this.$el.append('<label><strong>check_type</strong></label>');
             this.$el.append(this._checkTypes);
 
@@ -125,12 +130,26 @@ define([
             // Monitoring Zones
             this._monitoringZones = $('<div>');
 
-            //IP
+            //Check Target
+            this._targetForm = $('<div>');
+            this._targetForm.append('<label><strong>check_target</strong></label>');
+            this._targetType = $('<select>').append('<option>ip</option><option>hostname</option>');
+            this._hostname = $('<input type="text" placeholder="Target Hostname" />').hide();
             this._ipAddresses = $('<select>');
-            this._ipAddressesForm = $('<div>');
-            this._ipAddressesForm.append('<label><strong>ip_address</strong></label>');
-            this._ipAddressesForm.append(this._ipAddresses);
 
+            this._targetForm.append(this._targetType, this._ipAddresses, this._hostname);
+
+            this._targetType.change(function (event) {
+                if (event.target.value == 'ip') {
+                    this._ipAddresses.show();
+                    this._hostname.hide();
+                } else {
+                    this._hostname.show();
+                    this._ipAddresses.hide();
+                }
+            }.bind(this));
+
+            // Fetch relevant dropdown data
             this.checkTypesCollection.fetch({success: this._populateCheckTypes.bind(this), error: function() {
                     this.$el.append("Check Types Fetch Failed");
                 }
@@ -144,7 +163,48 @@ define([
                 this.$el.append("Entity Fetch Failed");
             }});
 
-            this._checkTypes.change(this._handleTypeSelection.bind(this));
+        },
+
+        /* Parse form and return a JSON object suitable for creating a new check */
+        getValues: function () {
+
+            var new_check = {};
+            var details = {};
+
+            // Common data
+            new_check.type = this._checkType.id;
+            new_check.label = this._checkLabel.val();
+
+            // Remote check data
+            if (this._checkType.get('type') === 'remote') {
+                var target_type = this._targetType.val();
+                if (target_type === 'ip') {
+                    new_check.target_alias = this._ipAddresses.val();
+                } else {
+                    new_check.target_hostname = this._hostname.val();
+                }
+    
+                new_check.monitoring_zones_poll = [];
+                _.each(this._monitoringZones.find('input:checked'), function(mz_el) {
+                    new_check.monitoring_zones_poll.push(mz_el.name);
+                });
+            }
+
+            _.each(this._form.find('.details').find('input'), function (el) {
+                var val;
+                var key = el.name;
+                if (el.type === 'checkbox') {
+                    details[key] = el.checked;
+                } else {
+                    if (el.value) {
+                        details[key] = el.value;
+                    }
+                }
+            });
+            new_check.details = details;
+
+            // Specific check type data
+            return new_check;
 
         },
 
@@ -165,12 +225,13 @@ define([
 
         _makeForm: function(type) {
             var form = $('<form>');
+            var details = $('<div>').addClass('details');
 
             if (type.get('type') === 'remote') {
-                this._form.append(this._monitoringZones);
-                this._form.append('<hr/>');
-                this._form.append(this._ipAddresses);
-                this._form.append('<hr/>');
+                form.append(this._targetForm);
+                form.append('<hr/>');
+                form.append(this._monitoringZones);
+                form.append('<hr/>');
             }
 
             _.each(type.get('fields'), function (field) {
@@ -178,16 +239,17 @@ define([
                 if (_.indexOf(this.booleanFields, field.name) > -1) {
                     t = this.editBooleanTemplate;
                 }
-                form.append(t({key: field.name, value: field.description, optional: field.optional ? '(optional)' : ''}));
+                details.append(t({key: field.name, value: field.description, optional: field.optional ? '(optional)' : ''}));
             }.bind(this));
 
+            form.append(details);
             return form;
         },
 
         _handleTypeSelection: function(event) {
-            var checkType = this.checkTypesCollection.get(event.target.value);
+            this._checkType = this.checkTypesCollection.get(event.target.value);
             this._form.empty();
-            this._form.append(this._makeForm(checkType));
+            this._form.append(this._makeForm(this._checkType));
         },
 
         render: function() {
@@ -203,37 +265,77 @@ define([
             var body, magicFormView;
             body = $('<div>').addClass('modal-body');
 
-            magicFormView = new MagicFormView({checkTypesCollection: this.checkTypesCollection,
+            this._magicFormView = new MagicFormView({checkTypesCollection: this.checkTypesCollection,
                                                monitoringZonesCollection: this.monitoringZonesCollection,
                                                collection: this.collection});
 
-            body.append(magicFormView.render());
-
-
-            // if (this.body) {
-            //     body.append(_.isFunction(this.body) ? this.body() : this.body || "");
-            // }
-            // if (this.input) {
-            //     input = $('<input>').attr('type', 'text')
-            //                 .attr('placeholder', _.isFunction(this.label) ? this.label() : this.label || "");
-            //     body.append(input);
-            // }
+            body.append(this._magicFormView.render());
             return body;
+        },
+
+        _onConfirm: function () {
+            this.onConfirm(this._magicFormView.getValues());
+        }
+    });
+
+    var CheckDetailsView = Views.DetailsView.extend({
+
+        _makeBody: function() {
+            var body = $('<div>');
+            body.append($('<h3>').append('details'));
+            this._details = $('<dl>').addClass('dl-horizontal');
+            body.append(this._details);
+
+            this._alarms = $('<div>');
+            body.append(this._alarms);
+
+            this._detailsView = new Views.KeyValueView({
+                el: this._details,
+                model: this.model,
+                editKeys: false,
+                editableKeys: ['label'],
+                ignoredKeys: ['ip_addresses', 'metadata', 'details', 'entity_id'],
+                formatters: {created_at: function (val) {return (new Date(val));},
+                             updated_at: function (val) {return (new Date(val));}}
+            });
+
+            return body;
+        },
+
+        handleSave: function () {
+
+        },
+
+        render: function () {
+            this._detailsView.render(this.editState);
         }
     });
 
 
-    var renderCheckDetails = function (id) {
-        $('#entities').empty();
-
-        var model = App.getInstance().account.entities.get(id);
-        if (!model) {
+    var renderCheckDetails = function (eid, cid) {
+  
+        var entity = App.getInstance().account.entities.get(eid);
+        if (!entity) {
             window.location.hash = 'entities';
             return;
         }
 
-        var entityDetailsView = new EntityDetailsView({el: $("#entities"), "model": model});
-        entityDetailsView.render();
+        function _fetchSuccess (collection) {
+            var check = collection.get(cid);
+            if (!check) {
+                window.location.hash = 'entities/' + entity.id;
+                return;
+            }
+            var checkDetailsView = new CheckDetailsView({el: $("#check-details-view-content"), model: check});
+            Views.renderView('check-details', [entity, check]);
+            checkDetailsView.render();
+        }
+
+        function _fetchError (collection) {
+            window.location.hash = 'entities';
+        }
+
+        entity.checks.fetch({success: _fetchSuccess, error: _fetchError});
     };
 
     return {CheckListView: CheckListView,

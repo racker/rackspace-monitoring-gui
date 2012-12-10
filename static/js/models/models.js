@@ -180,6 +180,9 @@ define([
         },
         getAccount: function() {
             return getAccount();
+        },
+        getLink: function () {
+            return '#entities/' + this.id;
         }
     });
 
@@ -215,6 +218,9 @@ define([
             delete cleaned_attr.entity_id;
 
             Backbone.Model.prototype.save.call(this, cleaned_attr, options);
+        },
+        getLink: function () {
+            return '#entities/' + this.get('entity_id') + '/alarms/' + this.id;
         }
     });
 
@@ -250,8 +256,35 @@ define([
     }
 
     /* CHECKS */
-
     var Check = Backbone.Model.extend({
+        sync: function(method, model, options) {
+
+            function doSuccess(resp, status, xhr) {
+                var id = xhr.getResponseHeader('Location').split('/').pop();
+
+                resp = {id: id};
+                xhr.responseText = JSON.stringify(resp);
+
+                options['success'](resp, status, xhr);
+            }
+
+            function doError(model, response) {
+                options['error'](model, response);
+            }
+
+            if(method === 'create') {
+                var newOptions = _.reject(options, function(key) {
+                    return key === 'success' || key === 'error';
+                });
+                newOptions['success'] = doSuccess;
+                newOptions['error'] = doError;
+                var response = Backbone.sync(method, model, newOptions);
+
+            } else {
+                return Backbone.sync(method, model, options);
+            }
+
+        },
         urlRoot: function() {
             return BASE_URL + '/entities/' + this.get('entity_id') + '/checks/';
         },
@@ -268,6 +301,9 @@ define([
         },
         getEntity: function() {
             return App.getInstance().account.entities.get(this.get('entity_id'));
+        },
+        getLink: function () {
+            return '#entities/' + this.get('entity_id') + '/checks/' + this.id;
         }
     });
 

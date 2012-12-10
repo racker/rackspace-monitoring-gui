@@ -192,15 +192,15 @@ define([
 
     var renderEntityDetails = function (id) {
 
-        Views.renderView('entity-details');
-
         var model = App.getInstance().account.entities.get(id);
         if (!model) {
             window.location.hash = 'entities';
             return;
         }
 
-        var entityDetailsView = new EntityDetailsView({el: $("#entity-details-view-content"), "model": model});
+        Views.renderView('entity-details', [model]);
+
+        var entityDetailsView = new EntityDetailsView({el: $("#entity-details-view-content"), model: model});
         entityDetailsView.render();
     };
 
