@@ -69,30 +69,155 @@ define([
 
     });
 
-    var MagicFormView = Backbone.View.extend({
-
-        booleanFields: ['starttls', 'follow_redirects', 'ssl'],
-
-        selectIpTemplate: _.template(
-            "<% _.each(ip_addresses, function(ip_address, label) { %>" +
-                "<option name='<%= label %>' value='<%= label %>'><%= label %> (<%= ip_address %>)</option>" +
-            "<% }); %>"
-        ),
-
-        selectTypeTemplate: _.template(
-            "<option></option>" +
-            "<% _.each(check_types, function(type) { %>" +
-                "<option><%= type.id %></option>" +
-            "<% }); %>"
-        ),
+    var MonitoringZonesSelect = Backbone.View.extend({
 
         monitoringZoneTemplate: _.template(
-            "<label class='key'><strong>monitoring_zones</strong></label>" +
             "<% _.each(monitoring_zones, function(mz) { %>" +
                 "<label class='checkbox'>" +
                     "<input type='checkbox' class='monitoring_zones_select' name='<%= mz.id %>'>" +
                     "<%= mz.label %> (<%= mz.id %>)" +
                 "</label>" +
+            "<% }); %>"
+        ),
+
+        initialize: function(opts) {
+
+            this.collection.fetch({
+                success: this.render.bind(this),
+                error: function () {
+                    this.$el.empty();
+                    this.$el.append('fetching monitoring zones failed');
+                }
+            });
+        },
+
+        render: function () {
+            this.$el.empty();
+            this.$el.html(this.monitoringZoneTemplate({monitoring_zones: this.collection.toJSON()}));
+            if (this.model) {
+                // TODO: Check already selected mzs
+            }
+
+            return this.$el;
+        },
+
+        getValues: function () {
+            var vals = [];
+            _.each(this.$el.find('input:checked'), function(mz_el) {
+                vals.push(mz_el.name);
+            });
+            return vals;
+        }
+    });
+
+    var TargetSelect = Backbone.View.extend({
+
+        viewTemplate: _.template(
+            "<dt><strong><%= key %></strong></dt>" +
+            "<dd><%= value %>&nbsp;</dd>"
+        ),
+
+        editTemplate: _.template(
+            "<% _.each(ip_addresses, function(ip_address, label) { %>" +
+                "<option name='<%= label %>' value='<%= label %>'><%= label %> (<%= ip_address %>)</option>" +
+            "<% }); %>"
+        ),
+
+
+        initialize: function(opts) {
+
+            this.entity = opts.entity;
+            this.check = opts.check;
+
+            this._display = $('<dl>').addClass('dl-horizontal');
+
+            this._edit = $('<div>');
+            this._edit.hide();
+            this._targetType = $('<select>').append('<option value="ip">ip</option><option value="hostname">hostname</option>');
+            this._hostname = $('<input type="text" placeholder="Target Hostname" />').hide();
+            this._ipAddresses = $('<select>');
+
+            this._edit.append(this._targetType, this._ipAddresses, this._hostname);
+
+            this._targetType.change(function (event) {
+                if (event.target.value == 'ip') {
+                    this._ipAddresses.show();
+                    this._hostname.hide();
+                } else {
+                    this._hostname.show();
+                    this._ipAddresses.hide();
+                }
+            }.bind(this));
+
+            this.entity.fetch();
+
+            this.$el.append(this._display, this._edit);
+
+        },
+
+        render: function (edit) {
+
+            var selected;
+            var target = {};
+
+            if (edit) {
+                this._display.hide();
+                this._edit.show();
+                this._ipAddresses.empty();
+                this._ipAddresses.html(this.editTemplate(this.entity.toJSON()));
+
+                if (this.check) {
+
+                    /* we have to pre-set the target selector with existing values */
+                    if (this.check.get('target_alias')) {
+                        this._ipAddresses.find('option[value=' + this.check.get('target_alias') +']').attr('selected', 'selected');
+                    } else {
+                        this._targetType.find('option[value=hostname]').attr('selected', 'selected').change();
+                        this._hostname.attr('value', this.check.get('target_hostname'));
+                    }
+                }
+            } else {
+                this._display.show();
+                this._edit.hide();
+                if (this.check.get('target_hostname')) {
+                    target.key = 'target_hostname';
+                    target.value = this.check.get('target_hostname');
+                } else {
+                    target.key = 'target_alias';
+                    target.value = this.check.get('target_alias') + ' (' + this.entity.get('ip_addresses')[this.check.get('target_alias')] + ')';
+                }
+                this._display.empty();
+                this._display.append(this.viewTemplate(target));
+            }
+
+            return this.$el;
+        },
+
+        getValues: function () {
+            var val = {type: null, value: null};
+
+            var target_type = this._targetType.val();
+            if (target_type === 'ip') {
+                val.type = 'target_alias';
+                val.value = this._ipAddresses.val();
+            } else {
+                val.type = 'target_hostname';
+                val.value = this._hostname.val();
+            }
+
+            return val;
+        }
+
+    });
+
+    var NewCheckForm = Backbone.View.extend({
+
+        booleanFields: ['starttls', 'follow_redirects', 'ssl'],
+
+        selectTypeTemplate: _.template(
+            "<option></option>" +
+            "<% _.each(check_types, function(type) { %>" +
+                "<option><%= type.id %></option>" +
             "<% }); %>"
         ),
 
@@ -129,39 +254,22 @@ define([
 
             // Monitoring Zones
             this._monitoringZones = $('<div>');
+            this._monitoringZones.append('<label><strong>monitoring_zones</strong></label>');
+            this._monitoringZonesForm = new MonitoringZonesSelect({collection: this.monitoringZonesCollection});
+            this._monitoringZones.append(this._monitoringZonesForm.render());
 
             //Check Target
+            this._target = $('<div>');
+            this._target.append('<label><strong>check_target</strong></label>');
             this._targetForm = $('<div>');
-            this._targetForm.append('<label><strong>check_target</strong></label>');
-            this._targetType = $('<select>').append('<option>ip</option><option>hostname</option>');
-            this._hostname = $('<input type="text" placeholder="Target Hostname" />').hide();
-            this._ipAddresses = $('<select>');
-
-            this._targetForm.append(this._targetType, this._ipAddresses, this._hostname);
-
-            this._targetType.change(function (event) {
-                if (event.target.value == 'ip') {
-                    this._ipAddresses.show();
-                    this._hostname.hide();
-                } else {
-                    this._hostname.show();
-                    this._ipAddresses.hide();
-                }
-            }.bind(this));
+            this._targetView = new TargetSelect({el: this._targetForm, entity: this.collection.entity});
+            this._target.append(this._targetForm);
 
             // Fetch relevant dropdown data
             this.checkTypesCollection.fetch({success: this._populateCheckTypes.bind(this), error: function() {
                     this.$el.append("Check Types Fetch Failed");
                 }
             });
-
-            this.monitoringZonesCollection.fetch({success: this._populateMonitoringZones.bind(this), error: function () {
-                this.$el.append("Monitoring Zones Fetch Failed");
-            }});
-
-            this.collection.entity.fetch({success: this._populateIpAddresses.bind(this), error: function () {
-                this.$el.append("Entity Fetch Failed");
-            }});
 
         },
 
@@ -177,17 +285,9 @@ define([
 
             // Remote check data
             if (this._checkType.get('type') === 'remote') {
-                var target_type = this._targetType.val();
-                if (target_type === 'ip') {
-                    new_check.target_alias = this._ipAddresses.val();
-                } else {
-                    new_check.target_hostname = this._hostname.val();
-                }
-    
-                new_check.monitoring_zones_poll = [];
-                _.each(this._monitoringZones.find('input:checked'), function(mz_el) {
-                    new_check.monitoring_zones_poll.push(mz_el.name);
-                });
+                var target = this._targetView.getValues();
+                new_check[target.type] = target.value;
+                new_check.monitoring_zones_poll = this._monitoringZonesForm.getValues();
             }
 
             _.each(this._form.find('.details').find('input'), function (el) {
@@ -208,19 +308,9 @@ define([
 
         },
 
-        _populateMonitoringZones: function (collection) {
-            this._monitoringZones.empty();
-            this._monitoringZones.html(this.monitoringZoneTemplate({monitoring_zones: this.monitoringZonesCollection.toJSON()}));
-        },
-
         _populateCheckTypes: function (collection) {
             this._checkTypes.empty();
             this._checkTypes.html(this.selectTypeTemplate({check_types: this.checkTypesCollection.toJSON()}));
-        },
-
-        _populateIpAddresses: function (collection) {
-            this._ipAddresses.empty();
-            this._ipAddresses.html(this.selectIpTemplate(this.collection.entity.toJSON()));
         },
 
         _makeForm: function(type) {
@@ -228,7 +318,7 @@ define([
             var details = $('<div>').addClass('details');
 
             if (type.get('type') === 'remote') {
-                form.append(this._targetForm);
+                form.append(this._target);
                 form.append('<hr/>');
                 form.append(this._monitoringZones);
                 form.append('<hr/>');
@@ -253,28 +343,26 @@ define([
         },
 
         render: function() {
-            this._populateMonitoringZones(this.monitoringZonesCollection);
+            this._targetView.render(true);
             this._populateCheckTypes(this.checkTypesCollection);
-            this._populateIpAddresses(this.collection);
             return this.$el;
         }
     });
 
     var NewCheckModal = Views.Modal.extend({
         _makeBody: function () {
-            var body, magicFormView;
-            body = $('<div>').addClass('modal-body');
+            var body = $('<div>').addClass('modal-body');
 
-            this._magicFormView = new MagicFormView({checkTypesCollection: this.checkTypesCollection,
+            this._newCheckForm = new NewCheckForm({checkTypesCollection: this.checkTypesCollection,
                                                monitoringZonesCollection: this.monitoringZonesCollection,
                                                collection: this.collection});
 
-            body.append(this._magicFormView.render());
+            body.append(this._newCheckForm.render());
             return body;
         },
 
         _onConfirm: function () {
-            this.onConfirm(this._magicFormView.getValues());
+            this.onConfirm(this._newCheckForm.getValues());
         }
     });
 
@@ -282,9 +370,28 @@ define([
 
         _makeBody: function() {
             var body = $('<div>');
-            body.append($('<h3>').append('details'));
             this._details = $('<dl>').addClass('dl-horizontal');
             body.append(this._details);
+
+            body.append($('<h3>').append('details'));
+            this._options = $('<dl>').addClass('dl-horizontal');
+            body.append(this._options);
+
+            if (this.model.get('type').indexOf("remote.") === 0) {
+                body.append($('<h3>').append('target'));
+                this._target = $('<div>');
+                body.append(this._target);
+                this._targetView = new TargetSelect({el: this._target, check: this.model, entity: this.model.getEntity()});
+
+                body.append($('<h3>').append('monitoring_zones'));
+                this._monitoringZones = $('<div>');
+                body.append(this._monitoringZones);
+                this._monitoringZonesView = new MonitoringZonesSelect({el: this._monitoringZones, collection: App.getInstance().account.monitoring_zones, model: this.model});
+            }
+
+            body.append($('<h3>').append('metadata'));
+            this._metadata = $('<dl>').addClass('dl-horizontal');
+            body.append(this._metadata);
 
             this._alarms = $('<div>');
             body.append(this._alarms);
@@ -294,9 +401,26 @@ define([
                 model: this.model,
                 editKeys: false,
                 editableKeys: ['label'],
-                ignoredKeys: ['ip_addresses', 'metadata', 'details', 'entity_id'],
+                ignoredKeys: ['metadata', 'details',
+                              'monitoring_zones_poll',
+                              'entity_id', 'target_hostname',
+                              'target_alias', 'target_resolver'],
                 formatters: {created_at: function (val) {return (new Date(val));},
                              updated_at: function (val) {return (new Date(val));}}
+            });
+
+            this._optionsView = new Views.KeyValueView({
+                el: this._options,
+                modelKey: 'details',
+                model: this.model,
+                editKeys: false
+            });
+
+            this._metadataView = new Views.KeyValueView({
+                el: this._metadata,
+                modelKey: 'metadata',
+                model: this.model,
+                editKeys: true
             });
 
             return body;
@@ -308,6 +432,16 @@ define([
 
         render: function () {
             this._detailsView.render(this.editState);
+            this._optionsView.render(this.editState);
+            this._metadataView.render(this.editState);
+
+            if (this._monitoringZonesView) {
+                this._monitoringZonesView.render(this.editState);
+            }
+            if (this._targetView) {
+                this._targetView.render(this.editState);
+            }
+
         }
     });
 

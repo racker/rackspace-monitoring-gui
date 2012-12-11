@@ -70,7 +70,7 @@ define([
                 model: this.model,
                 editKeys: false,
                 editableKeys: ['label', 'agent_id'],
-                ignoredKeys: ['ip_addresses', 'metadata'],
+                ignoredKeys: ['ip_addresses', 'metadata', 'checks'],
                 formatters: {created_at: function (val) {return (new Date(val));},
                              updated_at: function (val) {return (new Date(val));}}
             });
