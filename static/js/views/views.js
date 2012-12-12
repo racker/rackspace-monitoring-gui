@@ -211,6 +211,8 @@ define([
 
         initialize: function(opts) {
 
+            this._initialize(opts);
+
             this.$el.empty();
 
             opts = opts || {};
@@ -234,6 +236,9 @@ define([
             this.collection.on('reset', this.render.bind(this));
 
             this.render();
+        },
+
+        _initialize: function (opts) {
 
         },
 
@@ -291,12 +296,20 @@ define([
             return body;
         },
 
+        _filteredCollection: function () {
+            return this.collection;
+        },
+
         render: function()
         {
+
+            var c = this._filteredCollection();
             $(this.el).find('table').empty();
-            this.collection.each(function (m) {
-                this.add(m);
-            }.bind(this));
+            if (c.each) {
+                c.each(function (m) { this.add(m); }.bind(this));
+            } else {
+                _.each(c, function (m) { this.add(m); }.bind(this));
+            }
             return this;
         },
 
@@ -538,7 +551,7 @@ define([
                     crumb.html(model.get('label') + ' (' + model.id + ')');
                     crumb.addClass('active');
                 } else {
-                   crumb.append($('<a>').attr('href', model.getLink()).html(model.get('label') + ' (' + model.id + ')'));
+                   crumb.append($('<a>').attr('href', model.getLink()).html(model.get('label') + '(' + model.id + ')'));
                    crumb.append($('<span>').addClass('divider').html('/'));
                 }
                 bc.append(crumb);
@@ -549,49 +562,6 @@ define([
         }
         
 
-    };
- 
-    var AlarmDetailsView = Backbone.View.extend({
-        el: $('#alarm-details'),
-        tagName: 'div',
-        template: _.template(
-            "<tr><td><strong>id</strong></td><td><%= id %></td></tr>" +
-            "<tr><td><strong>label</strong></td><td><%= label %></td></tr>" +
-            "<tr><td><strong>criteria</strong></td><td><%= criteria %></td></tr>"
-        ),
-
-        render: function () {
-            // render entity details
-            $(this.el).html(this.template(this.model.toJSON()));
-            _renderView('alarm-details');
-
-        }
-    });
-
-    var renderAlarmDetails = function (id, aid) {
-
-        var success = function (collection, response) {
-            var alarm = collection.get(aid);
-            if (!alarm) {
-                window.location.hash = 'entities/' + id;
-            }
-
-            alarmDetailsView = new AlarmDetailsView({"model": alarm});
-            alarmDetailsView.render();
-        };
-
-        var error = function (collection, response) {
-            window.location.hash = 'entities';
-
-        };
-
-        var entity = App.getInstance().account.entities.get(id);
-        if (!entity) {
-            window.location.hash = 'entities';
-            return;
-        }
-
-        entity.alarms.fetch({"success": success, "error": error});
     };
 
     var renderAccount = function () {
@@ -612,7 +582,6 @@ define([
             KeyValueView: KeyValueView,
             DetailsView: DetailsView,
             renderView: renderView,
-            'renderAlarmDetails': renderAlarmDetails,
             'renderAccount': renderAccount,
             'renderLoading': renderLoading,
             'renderError': renderError};

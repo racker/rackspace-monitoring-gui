@@ -5,8 +5,9 @@ define([
   'app',
   'models/models',
   'views/views',
+  'views/alarms',
   'jquerydebounce'
-], function($, Backbone, _, App, Models, Views) {
+], function($, Backbone, _, App, Models, Views, AlarmViews) {
 
     var CheckView = Views.ListElementView.extend({
 
@@ -71,7 +72,16 @@ define([
 
     var MonitoringZonesSelect = Backbone.View.extend({
 
-        monitoringZoneTemplate: _.template(
+        viewTemplate: _.template(
+            "<% _.each(monitoring_zones, function(mz) { %>" +
+                "<label class='checkbox'>" +
+                    "<input type='checkbox' class='monitoring_zones_select' disabled='disabled' name='<%= mz.id %>'>" +
+                    "<%= mz.label %> (<%= mz.id %>)" +
+                "</label>" +
+            "<% }); %>"
+        ),
+
+        editTemplate: _.template(
             "<% _.each(monitoring_zones, function(mz) { %>" +
                 "<label class='checkbox'>" +
                     "<input type='checkbox' class='monitoring_zones_select' name='<%= mz.id %>'>" +
@@ -82,8 +92,10 @@ define([
 
         initialize: function(opts) {
 
+            this.check = opts.check;
+
             this.collection.fetch({
-                success: this.render.bind(this),
+                success: this.render.bind(this, false),
                 error: function () {
                     this.$el.empty();
                     this.$el.append('fetching monitoring zones failed');
@@ -91,11 +103,21 @@ define([
             });
         },
 
-        render: function () {
+        render: function (edit) {
             this.$el.empty();
-            this.$el.html(this.monitoringZoneTemplate({monitoring_zones: this.collection.toJSON()}));
-            if (this.model) {
-                // TODO: Check already selected mzs
+
+            if (edit) {
+                this.$el.html(this.editTemplate({monitoring_zones: this.collection.toJSON()}));
+            } else {
+                this.$el.html(this.viewTemplate({monitoring_zones: this.collection.toJSON()}));
+            }
+
+            if (this.check) {
+                _.each(this.$el.find('input'), function (mz) {
+                    if (_.indexOf(this.check.get('monitoring_zones_poll'), $(mz).attr('name')) !== -1) {
+                        $(mz).attr('checked', 'checked');
+                    }
+                }.bind(this));
             }
 
             return this.$el;
@@ -210,27 +232,98 @@ define([
 
     });
 
-    var NewCheckForm = Backbone.View.extend({
+    var CheckDetails = Backbone.View.extend({
 
         booleanFields: ['starttls', 'follow_redirects', 'ssl'],
+
+        viewTemplate: _.template(
+            "<dt><strong><%= key %></strong></dt>" +
+            "<dd><%= value %>&nbsp;</dd>"
+        ),
+
+        viewBooleanTemplate: _.template(
+            "<dt><strong><%= key %></strong></dt>" +
+            "<dd><input name='<%= key %>' type='checkbox' <%= value %> disabled='disabled'</dd>"
+        ),
+
+        editTextTemplate: _.template(
+            "<dt><label><strong><%= key %></strong><%= optional %></label></dt>" +
+            "<dd><input type='text' name='<%= key %>' value='<%= value %>' placeholder='<%= description %>' /></dd>"
+        ),
+
+        editBooleanTemplate: _.template(
+            "<dt><strong><%= key %></strong></dt>" +
+            "<dd><input name='<%= key %>' type='checkbox' <%= value %>></dd>"
+        ),
+
+        initialize: function(opts) {
+
+            this.check = opts.check;
+
+        },
+
+        render: function (edit, type) {
+
+            this.$el.empty();
+            var t, v, val;
+
+            _.each(type.get('fields'), function (field) {
+
+                val = null;
+
+                if (edit) {
+                    t = this.editTextTemplate;
+                    if (_.indexOf(this.booleanFields, field.name) > -1) {
+                        t = this.editBooleanTemplate;
+                    }
+                } else {
+                    t = this.viewTemplate;
+                    if (_.indexOf(this.booleanFields, field.name) > -1) {
+                        t = this.viewBooleanTemplate;
+                    }
+                }
+
+                /* Need to display the actual value if we are editing a real check */
+                if (this.check) {
+                    if (_.indexOf(this.booleanFields, field.name) !== -1) {
+                        val = this.check.get('details')[field.name] ? 'checked' : '';
+                    } else {
+                        val = this.check.get('details')[field.name];
+                    }
+                }
+
+                v = {key: field.name, value: val || '', description: field.description, optional: field.optional ? '(optional)' : ''};
+
+
+                this.$el.append(t(v));
+
+            }.bind(this));
+        },
+
+        getValues: function () {
+            var details = {};
+            _.each(this.$el.find('input'), function (el) {
+                var val;
+                var key = el.name;
+                if (el.type === 'checkbox') {
+                    details[key] = el.checked;
+                } else {
+                    if (el.value) {
+                        details[key] = el.value;
+                    }
+                }
+            });
+            return details;
+        }
+    });
+
+    var NewCheckForm = Backbone.View.extend({
 
         selectTypeTemplate: _.template(
             "<option></option>" +
             "<% _.each(check_types, function(type) { %>" +
                 "<option><%= type.id %></option>" +
             "<% }); %>"
-        ),
-
-        editTextTemplate: _.template(
-            "<label><strong><%= key %></strong><%= optional %></label>" +
-            "<input type='text' name='<%= key %>' placeholder='<%= value %>' />"
-        ),
-
-        editBooleanTemplate: _.template(
-            "<label class='checkbox'>" +
-                "<input name='<%= key %>' type='checkbox' value=''>" +
-                "<strong><%= key %></strong>" +
-            "</label>"
         ),
 
         initialize: function(opts) {
@@ -255,8 +348,9 @@ define([
             // Monitoring Zones
             this._monitoringZones = $('<div>');
             this._monitoringZones.append('<label><strong>monitoring_zones</strong></label>');
-            this._monitoringZonesForm = new MonitoringZonesSelect({collection: this.monitoringZonesCollection});
-            this._monitoringZones.append(this._monitoringZonesForm.render());
+            this._monitoringZonesForm = $('<div>');
+            this._monitoringZonesView = new MonitoringZonesSelect({el: this._monitoringZonesForm, collection: this.monitoringZonesCollection});
+            this._monitoringZones.append(this._monitoringZonesForm);
 
             //Check Target
             this._target = $('<div>');
@@ -264,6 +358,13 @@ define([
             this._targetForm = $('<div>');
             this._targetView = new TargetSelect({el: this._targetForm, entity: this.collection.entity});
             this._target.append(this._targetForm);
+
+            //Check Details
+            this._details = $('<div>');
+            this._details.append('<label><strong>details</strong></label>');
+            this._detailsForm = $('<div>');
+            this._detailsView = new CheckDetails({el: this._detailsForm, collection: this.checkTypesCollection});
+            this._details.append(this._detailsForm);
 
             // Fetch relevant dropdown data
             this.checkTypesCollection.fetch({success: this._populateCheckTypes.bind(this), error: function() {
@@ -277,7 +378,6 @@ define([
         getValues: function () {
 
             var new_check = {};
-            var details = {};
 
             // Common data
             new_check.type = this._checkType.id;
@@ -287,23 +387,11 @@ define([
             if (this._checkType.get('type') === 'remote') {
                 var target = this._targetView.getValues();
                 new_check[target.type] = target.value;
-                new_check.monitoring_zones_poll = this._monitoringZonesForm.getValues();
+                new_check.monitoring_zones_poll = this._monitoringZonesView.getValues();
             }
 
-            _.each(this._form.find('.details').find('input'), function (el) {
-                var val;
-                var key = el.name;
-                if (el.type === 'checkbox') {
-                    details[key] = el.checked;
-                } else {
-                    if (el.value) {
-                        details[key] = el.value;
-                    }
-                }
-            });
-            new_check.details = details;
+            new_check.details = this._detailsView.getValues();
 
-            // Specific check type data
             return new_check;
 
         },
@@ -315,35 +403,32 @@ define([
 
         _makeForm: function(type) {
             var form = $('<form>');
-            var details = $('<div>').addClass('details');
 
+            /* render each subform into their own elements */
+            this._targetView.render(true);
+            this._monitoringZonesView.render(true);
+            this._detailsView.render(true, this._checkType);
+
+            /* construct form */
             if (type.get('type') === 'remote') {
                 form.append(this._target);
                 form.append('<hr/>');
                 form.append(this._monitoringZones);
                 form.append('<hr/>');
             }
-
-            _.each(type.get('fields'), function (field) {
-                var t = this.editTextTemplate;
-                if (_.indexOf(this.booleanFields, field.name) > -1) {
-                    t = this.editBooleanTemplate;
-                }
-                details.append(t({key: field.name, value: field.description, optional: field.optional ? '(optional)' : ''}));
-            }.bind(this));
-
-            form.append(details);
+            form.append(this._details);
             return form;
         },
 
         _handleTypeSelection: function(event) {
             this._checkType = this.checkTypesCollection.get(event.target.value);
+
+            /* construct subforms */
             this._form.empty();
             this._form.append(this._makeForm(this._checkType));
         },
 
         render: function() {
-            this._targetView.render(true);
             this._populateCheckTypes(this.checkTypesCollection);
             return this.$el;
         }
@@ -370,12 +455,12 @@ define([
 
         _makeBody: function() {
             var body = $('<div>');
-            this._details = $('<dl>').addClass('dl-horizontal');
-            body.append(this._details);
+            this._check = $('<dl>').addClass('dl-horizontal');
+            body.append(this._check);
 
             body.append($('<h3>').append('details'));
-            this._options = $('<dl>').addClass('dl-horizontal');
-            body.append(this._options);
+            this._details = $('<dl>').addClass('dl-horizontal');
+            body.append(this._details);
 
             if (this.model.get('type').indexOf("remote.") === 0) {
                 body.append($('<h3>').append('target'));
@@ -386,7 +471,7 @@ define([
                 body.append($('<h3>').append('monitoring_zones'));
                 this._monitoringZones = $('<div>');
                 body.append(this._monitoringZones);
-                this._monitoringZonesView = new MonitoringZonesSelect({el: this._monitoringZones, collection: App.getInstance().account.monitoring_zones, model: this.model});
+                this._monitoringZonesView = new MonitoringZonesSelect({el: this._monitoringZones, collection: App.getInstance().account.monitoring_zones, check: this.model});
             }
 
             body.append($('<h3>').append('metadata'));
@@ -396,11 +481,11 @@ define([
             this._alarms = $('<div>');
             body.append(this._alarms);
 
-            this._detailsView = new Views.KeyValueView({
-                el: this._details,
+            this._checkView = new Views.KeyValueView({
+                el: this._check,
                 model: this.model,
                 editKeys: false,
-                editableKeys: ['label'],
+                editableKeys: ['label', 'timeout', 'period'],
                 ignoredKeys: ['metadata', 'details',
                               'monitoring_zones_poll',
                               'entity_id', 'target_hostname',
@@ -409,11 +494,19 @@ define([
                              updated_at: function (val) {return (new Date(val));}}
             });
 
-            this._optionsView = new Views.KeyValueView({
-                el: this._options,
-                modelKey: 'details',
-                model: this.model,
-                editKeys: false
+            this._detailsView = new CheckDetails({
+                el: this._details,
+                check: this.model
+            });
+
+            App.getInstance().account.check_types.fetch({
+                success: function (collection) {
+                    this._checkType = collection.get(this.model.get('type'));
+                    this._detailsView.render(this.editState, this._checkType);
+                }.bind(this),
+                error: function () {
+                    this._details.append('failed to fetch check types');
+                }
             });
 
             this._metadataView = new Views.KeyValueView({
@@ -423,16 +516,52 @@ define([
                 editKeys: true
             });
 
+            this._alarmsView = new AlarmViews.AlarmListView({el: this._alarms, collection: this.model.getEntity().alarms, check: this.model});
+
             return body;
         },
 
         handleSave: function () {
 
+            var _success = function (model) {
+                this.editState = false;
+                this.model.fetch();
+            };
+
+            var _error = function (model, xhr) {
+                var error = {message: 'Unknown Error', details: 'Try again later'};
+                try {
+                    var r = JSON.parse(xhr.responseText);
+                    error.message = r.message;
+                    error.details = r.details;
+                } catch (e) {}
+
+                this.displayError(error);
+                this.model.fetch();
+            };
+
+            var new_check = this._checkView.getValues();
+
+            if (this.model.get('type').indexOf("remote.") === 0) {
+                var target = this._targetView.getValues();
+                new_check[target.type] = target.value;
+                new_check.monitoring_zones_poll = this._monitoringZonesView.getValues();
+            }
+            new_check.metadata = this._metadataView.getValues();
+            new_check.monitoring_zones_poll = this._monitoringZonesView.getValues();
+            new_check.details = this._detailsView.getValues();
+
+            this.model.save(new_check, {success: _success.bind(this), error: _error.bind(this)});
+
         },
 
         render: function () {
-            this._detailsView.render(this.editState);
-            this._optionsView.render(this.editState);
+            this.model.getEntity().alarms.fetch();
+
+            if (this._checkType) {
+                this._detailsView.render(this.editState, this._checkType);
+            }
+            this._checkView.render(this.editState);
             this._metadataView.render(this.editState);
 
             if (this._monitoringZonesView) {
@@ -440,6 +569,16 @@ define([
             }
             if (this._targetView) {
                 this._targetView.render(this.editState);
+            }
+
+            if(this.editState) {
+                this._editButton.hide();
+                this._saveButton.show();
+                this._cancelButton.show();
+            } else {
+                this._saveButton.hide();
+                this._cancelButton.hide();
+                this._editButton.show();
             }
 
         }
