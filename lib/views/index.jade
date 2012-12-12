@@ -8,8 +8,16 @@ block navbar
   a.btn.btn-navbar(data-toggle="collapse", data-target=".nav-collapse")
     span.icon-bar
     span.icon-bar
+    span.icon-bar
+    span.icon-bar
   a.brand(href="#entities")= "Rackspace Monitoring"
   div.nav-collapse.collapse
+    ul.nav
+      li(id="entities-view-link")
+        a(href="#entities")= "entities"
+    ul.nav
+      li(id="notifications-list-view-link")
+        a(href="#notifications")= "notifications"
     ul.nav
       li(id="grapher-view-link")
         a(href="#grapher")= "grapher"
@@ -24,12 +32,12 @@ block navbar
           a(href="/login")= "(Login)"
 
 block content
-  #entity-list-view-content.container
+  #entities-view-content.container
+  #notifications-list-view-content.container.hide
+  #notification-plan-details-view-content.container.hide
   #entity-details-view-content.container.hide
   #check-details-view-content.container.hide
-    include check-details
   #alarm-details-view-content.container.hide
-    include alarm-details
   #grapher-view-content.container.hide
     include grapher
   #account-view-content.container.hide
