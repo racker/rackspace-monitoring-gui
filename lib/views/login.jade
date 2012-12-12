@@ -1,7 +1,7 @@
 extends layout
 
 block navbar
-  a.brand(href="/")= "Rackspace Monitoring"
+  a.brand(href="/")= "Rackspace Monitoring Metrics Preview"
 
 block content
   h1= session.username
@@ -22,3 +22,12 @@ block content
               | Remember me
               input(type="checkbox", id="remember_me", name="remember_me", checked="checked")= "Remember me"
             button.btn(type="submit")= "Sign in"
+
+  .row-fluid
+    .span3
+    .span6
+      p= "This is a temporary user interface to be used during the preview phase of the Cloud Monitoring Agent and Metric features. Participation in the preview is subject to the terms at "
+        a(href="http://www.rackspace.com/information/legal/testterms/", target="_blank")= "http://www.rackspace.com/information/legal/testterms/"
+        | .
+
+    .span3
