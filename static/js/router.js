@@ -5,8 +5,10 @@ define([
   'underscore',
   'views/views',
   'views/entities',
+  'views/checks',
+  'views/alarms',
   'views/graph'
-], function($, Backbone, _, Views, EntityViews, Graph) {
+], function($, Backbone, _, Views, EntityViews, CheckViews, AlarmViews, Graph) {
 
   var router;
   var started = false;
@@ -14,8 +16,8 @@ define([
   var _addRouteHandlers = function () {
     router.on('route:entitiesRoute', function () {EntityViews.renderEntitiesList();});
     router.on('route:entityDetailsRoute', function (id) {EntityViews.renderEntityDetails(id);});
-    router.on('route:checkDetailsRoute', function (id, cid) {Views.renderCheckDetails(id, cid);});
-    router.on('route:alarmDetailsRoute', function (id, aid) {Views.renderAlarmDetails(id, aid);});
+    router.on('route:checkDetailsRoute', function (id, cid) {CheckViews.renderCheckDetails(id, cid);});
+    router.on('route:alarmDetailsRoute', function (id, aid) {AlarmViews.renderAlarmDetails(id, aid);});
     router.on('route:grapherRoute', function (id) {Graph.renderGraph(id);});
     router.on('route:accountRoute', function () {Views.renderAccount();});
   };

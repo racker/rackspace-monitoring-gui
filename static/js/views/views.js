@@ -174,10 +174,13 @@ define([
          },
 
         _cancelHandler: function () {
-            this._modal.remove();
+            this._modal.hide();
         },
 
         _deleteHandler: function () {
+            if (this._modal) {
+                this._modal.remove();
+            }
             this._modal = new Modal({onConfirm: this.deleteHandler.bind(this),
                                    onCancel: this._cancelHandler.bind(this),
                                    header: '<h4>Confirm Deletion of ' + this.model.get('label')+'</h4>',
@@ -208,6 +211,8 @@ define([
 
         initialize: function(opts) {
 
+            this._initialize(opts);
+
             this.$el.empty();
 
             opts = opts || {};
@@ -231,6 +236,9 @@ define([
             this.collection.on('reset', this.render.bind(this));
 
             this.render();
+        },
+
+        _initialize: function (opts) {
 
         },
 
@@ -270,14 +278,14 @@ define([
 
         },
 
-        error: function (message) {
+        error: function (e) {
             var error = $('<div>').addClass('alert alert-error');
             error.append($('<button>')
                             .addClass('close')
                             .attr('data-dismiss', 'alert')
                             .append('x'));
-            error.append($('<strong>').append('Error '));
-            error.append(message);
+            error.append($('<strong>').append(e.name + ": " + e.message));
+            error.append($('<p>').append(e.details));
             this._errors.append(error);
         },
 
@@ -288,12 +296,20 @@ define([
             return body;
         },
 
+        _filteredCollection: function () {
+            return this.collection;
+        },
+
         render: function()
         {
+
+            var c = this._filteredCollection();
             $(this.el).find('table').empty();
-            this.collection.each(function (m) {
-                this.add(m);
-            }.bind(this));
+            if (c.each) {
+                c.each(function (m) { this.add(m); }.bind(this));
+            } else {
+                _.each(c, function (m) { this.add(m); }.bind(this));
+            }
             return this;
         },
 
@@ -514,204 +530,50 @@ define([
     });
 
     /* Hides/Shows Relevant Stuff depending on the view */
-    var _renderView = function (view) {
+    var renderView = function (view, models) {
+
         /* Switch nav link */
         $('[id$=view-link]').removeClass('active');
         $('#' + view + '-view-link').addClass('active');
         /* Hide/Show relevant divs */
         $('[id$=view-content]').addClass('hide');
         $('#' + view + '-view-content').removeClass('hide');
-    };
 
-    var AlarmView = Backbone.View.extend({
-        tagName: 'tr',
-        template: _.template(
-            "<tr><td><a href='#entities/<%= entity_id %>/alarms/<%= id %>'> <%= id %> </a> </td></tr>"
-        ),
+        /* Hide/Show Breadcrumbs */
+        var crumb;
+        var bc = $('#breadcrumb');
 
-        events: {},
-
-        render: function () {
-            $(this.el).html(this.template(this.model.toJSON()));
-        }
-
-    });
-
-    var AlarmListView = Backbone.View.extend({
-        el: $('#check-alarms-list'),
-        events: {},
-
-        initialize: function()
-        {
-            this._cache = {};
-        },
-
-        render: function()
-        {
-            $(this.el).empty();
-            return this;
-        },
-
-        add: function(m)
-        {
-            var e = new AlarmView({
-                model: m
+        if (models) {
+            bc.empty();
+            _.each(models, function (model, index) {
+                crumb = $('<li>');
+                if (index === (models.length - 1)) {
+                    crumb.html(model.get('label') + ' (' + model.id + ')');
+                    crumb.addClass('active');
+                } else {
+                   crumb.append($('<a>').attr('href', model.getLink()).html(model.get('label') + '(' + model.id + ')'));
+                   crumb.append($('<span>').addClass('divider').html('/'));
+                }
+                bc.append(crumb);
             });
-            this._cache[m.get('id')] = e;
-            e.render();
-            $(this.el).append(e.el);
+            bc.show();
+        } else {
+            bc.hide();
         }
-    });
+        
 
-    var AlarmDetailsView = Backbone.View.extend({
-        el: $('#alarm-details'),
-        tagName: 'div',
-        template: _.template(
-            "<tr><td><strong>id</strong></td><td><%= id %></td></tr>" +
-            "<tr><td><strong>label</strong></td><td><%= label %></td></tr>" +
-            "<tr><td><strong>criteria</strong></td><td><%= criteria %></td></tr>"
-        ),
-
-        render: function () {
-            // render entity details
-            $(this.el).html(this.template(this.model.toJSON()));
-            _renderView('alarm-details');
-
-        }
-    });
-
-    var CheckDetailsView = Backbone.View.extend({
-        el: $('#check-details'),
-        tagName: 'div',
-        template: _.template(
-            "<tr><td><strong>id</strong></td><td><%= id %></td></tr>" +
-            "<tr><td><strong>label</strong></td><td><%= label %></td></tr>"
-        ),
-
-        renderAlarmListSuccess: function (alarms, response) {
-            var alv = new AlarmListView();
-            alv.render();
-            _.each(alarms.filterByCheck(this.model), function (alarm) {
-                alv.add(alarm);
-            });
-        },
-
-        renderAlarmListFail: function () {
-            var cl = $("#check-alarms-list");
-            cl.html("<tr><td>Failed Loading Alarms</td></tr>");
-        },
-
-        render: function () {
-            // render entity details
-            $(this.el).html(this.template(this.model.toJSON()));
-            _renderView('check-details');
-
-            // render check list
-            var cl = $("#check-alarms-list");
-            cl.html("<tr><td>LOADING ALARMS</td></tr>");
-            this.model.getEntity().alarms.fetch({"success": this.renderAlarmListSuccess.bind(this), "error": this.renderAlarmListFail});
-        }
-    });
-
-    var CheckView = Backbone.View.extend({
-        tagName: 'tr',
-        template: _.template("<td><a href='#/entities/<%= entity_id %>/checks/<%= id %>'><%= label %></a></td><td><%= id %></td>"),
-
-        events: {},
-
-        render: function () {
-            $(this.el).html(this.template(this.model.toJSON()));
-        }
-    });
-
-    var CheckListView = Backbone.View.extend({
-        el: $('#entity-checks-list'),
-        events: {},
-
-        initialize: function()
-        {
-            this._cache = {};
-        },
-
-        render: function()
-        {
-            $(this.el).empty();
-            return this;
-        },
-
-        add: function(m)
-        {
-            var e = new CheckView({
-                model: m
-            });
-            this._cache[m.get('id')] = e;
-            e.render();
-            $(this.el).append(e.el);
-        }
-    });
-
-    /* ROUTE HANDLERS */
-    var renderCheckDetails = function (id, cid) {
-
-        var success = function (collection, response) {
-            var check = collection.get(cid);
-            if (!check) {
-                window.location.hash = 'entities/' + id;
-            }
-
-            checkDetailsView = new CheckDetailsView({"model": check});
-            checkDetailsView.render();
-        };
-
-        var error = function (collection, response) {
-            window.location.hash = 'entities';
-
-        };
-        var entity = App.getInstance().account.entities.get(id);
-        if (!entity) {
-            window.location.hash = 'entities';
-            return;
-        }
-
-        entity.checks.fetch({"success": success, "error": error});
-    };
-
-    var renderAlarmDetails = function (id, aid) {
-
-        var success = function (collection, response) {
-            var alarm = collection.get(aid);
-            if (!alarm) {
-                window.location.hash = 'entities/' + id;
-            }
-
-            alarmDetailsView = new AlarmDetailsView({"model": alarm});
-            alarmDetailsView.render();
-        };
-
-        var error = function (collection, response) {
-            window.location.hash = 'entities';
-
-        };
-
-        var entity = App.getInstance().account.entities.get(id);
-        if (!entity) {
-            window.location.hash = 'entities';
-            return;
-        }
-
-        entity.alarms.fetch({"success": success, "error": error});
     };
 
     var renderAccount = function () {
-        _renderView('account');
+        renderView('account');
     };
 
     var renderLoading = function () {
-        _renderView('loading');
+        renderView('loading');
     };
 
     var renderError = function () {
-        _renderView('error');
+        renderView('error');
     };
 
     return {Modal: Modal,
@@ -719,11 +581,9 @@ define([
             ListElementView: ListElementView,
             KeyValueView: KeyValueView,
             DetailsView: DetailsView,
-            'renderCheckDetails': renderCheckDetails,
-            'renderAlarmDetails': renderAlarmDetails,
+            renderView: renderView,
             'renderAccount': renderAccount,
             'renderLoading': renderLoading,
-            'renderError': renderError,
-            'renderView': _renderView};
+            'renderError': renderError};
 
 });
