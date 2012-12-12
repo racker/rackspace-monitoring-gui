@@ -544,6 +544,21 @@ define([
             } else {
                 return Backbone.sync(method, model, options);
             }
+        },
+        getOk: function () {
+            return App.getInstance().account.notifications.reject(function (notification) {
+                return (!_.contains(this.get('ok_state'), notification.id));
+            }.bind(this));
+        },
+        getWarning: function () {
+            return App.getInstance().account.notifications.reject(function (notification) {
+                return (!_.contains(this.get('warning_state'), notification.id));
+            }.bind(this));
+        },
+        getCritical: function () {
+            return App.getInstance().account.notifications.reject(function (notification) {
+                return (!_.contains(this.get('critical_state'), notification.id));
+            }.bind(this));
         }
     });
 

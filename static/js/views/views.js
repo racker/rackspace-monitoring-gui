@@ -485,10 +485,9 @@ define([
 
         _makeFooter: function () {
             var dismissButton = $('<button>')
-                                    .attr('data-dismiss', 'modal')
-                                    .attr('type', 'button')
-                                    .addClass('close')
-                                    .html('Cancel');
+                                    .addClass('btn')
+                                    .html('Cancel')
+                                    .click(function (e) {this.hide();}.bind(this));
             var confirmButton = $('<button>')
                                     .addClass('btn btn-primary')
                                     .html('Confirm');
