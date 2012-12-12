@@ -128,6 +128,9 @@ define([
             this.entities = nestCollection(this, 'entities', new AccountEntityCollection([], {account: this}));
             this.check_types = nestCollection(this, 'check_types', new CheckTypeCollection([]));
             this.monitoring_zones = nestCollection(this, 'monitoring_zones', new MonitoringZoneCollection ([]));
+            this.notification_types = nestCollection(this, 'notification_types', new NotificationTypeCollection ([]));
+            this.notifications = nestCollection(this, 'notifications', new NotificationCollection ([]));
+            this.notification_plans = nestCollection(this, 'notification_plans', new NotificationPlanCollection ([]));
         }
     });
 
@@ -445,6 +448,124 @@ define([
         model: MonitoringZone,
         url: function() {
             return BASE_URL + '/monitoring_zones';
+        },
+        sync: function(method, model, options) {
+            return depaginatedRequest(this.url()).then(options.success, options.error);
+        }
+    });
+
+    var NotificationType = Backbone.Model.extend({
+        urlRoot: function() {
+            return BASE_URL + '/notification_types';
+        }
+    });
+
+    var NotificationTypeCollection = Backbone.Collection.extend({
+        model: NotificationType,
+        url: function() {
+            return BASE_URL + '/notification_types';
+        },
+        sync: function(method, model, options) {
+            return depaginatedRequest(this.url()).then(options.success, options.error);
+        }
+    });
+
+    var Notification = Backbone.Model.extend({
+        urlRoot: function() {
+            return BASE_URL + '/notifications';
+        },
+        sync: function(method, model, options) {
+
+            function doSuccess(resp, status, xhr) {
+                var id = xhr.getResponseHeader('Location').split('/').pop();
+
+                resp = {id: id};
+                xhr.responseText = JSON.stringify(resp);
+
+                options['success'](resp, status, xhr);
+            }
+
+            function doError(model, response) {
+                options['error'](model, response);
+            }
+
+            if(method === 'create') {
+                var newOptions = _.reject(options, function(key) {
+                    return key === 'success' || key === 'error';
+                });
+                newOptions['success'] = doSuccess;
+                newOptions['error'] = doError;
+                var response = Backbone.sync(method, model, newOptions);
+
+            } else {
+                return Backbone.sync(method, model, options);
+            }
+
+        }
+    });
+
+    var NotificationCollection = Backbone.Collection.extend({
+        model: Notification,
+        url: function() {
+            return BASE_URL + '/notifications';
+        },
+        sync: function(method, model, options) {
+            return depaginatedRequest(this.url()).then(options.success, options.error);
+        }
+    });
+
+    var NotificationPlan = Backbone.Model.extend({
+        urlRoot: function() {
+            return BASE_URL + '/notification_plans';
+        },
+        sync: function(method, model, options) {
+
+            function doSuccess(resp, status, xhr) {
+                var id = xhr.getResponseHeader('Location').split('/').pop();
+
+                resp = {id: id};
+                xhr.responseText = JSON.stringify(resp);
+
+                options['success'](resp, status, xhr);
+            }
+
+            function doError(model, response) {
+                options['error'](model, response);
+            }
+
+            if(method === 'create') {
+                var newOptions = _.reject(options, function(key) {
+                    return key === 'success' || key === 'error';
+                });
+                newOptions['success'] = doSuccess;
+                newOptions['error'] = doError;
+                var response = Backbone.sync(method, model, newOptions);
+
+            } else {
+                return Backbone.sync(method, model, options);
+            }
+        },
+        getOk: function () {
+            return App.getInstance().account.notifications.reject(function (notification) {
+                return (!_.contains(this.get('ok_state'), notification.id));
+            }.bind(this));
+        },
+        getWarning: function () {
+            return App.getInstance().account.notifications.reject(function (notification) {
+                return (!_.contains(this.get('warning_state'), notification.id));
+            }.bind(this));
+        },
+        getCritical: function () {
+            return App.getInstance().account.notifications.reject(function (notification) {
+                return (!_.contains(this.get('critical_state'), notification.id));
+            }.bind(this));
+        }
+    });
+
+    var NotificationPlanCollection = Backbone.Collection.extend({
+        model: NotificationPlan,
+        url: function() {
+            return BASE_URL + '/notification_plans';
         },
         sync: function(method, model, options) {
             return depaginatedRequest(this.url()).then(options.success, options.error);
