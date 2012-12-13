@@ -9,6 +9,7 @@ requirejs.config({
   paths: {
     jquery: 'extern/jquery/jquery',
     jqueryresize: 'extern/jquery/jquery.ba-resize',
+    jquerydebounce: 'extern/jquery/jquery.ba-throttle-debounce',
     underscore: 'extern/underscore/underscore',
     backbone: 'extern/backbone/backbone',
     bootstrap: 'extern/bootstrap/bootstrap',
@@ -21,6 +22,9 @@ requirejs.config({
           exports: '$'
       },
       'jqueryresize': {
+          deps: ['jquery']
+      },
+      'jquerydebounce': {
           deps: ['jquery']
       },
       'underscore': {
