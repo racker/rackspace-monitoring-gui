@@ -1,18 +1,14 @@
-/* underscore doesn't play nice with require.js, so we need this shim for
- * underscore and those libraries that expect it to be declared in the global
- * scope
- */
 require.config({
   paths: {
-    jquery: '/js/extern/jquery/jquery',
-    jqueryresize: '/js/extern/jquery/jquery.ba-resize',
-    jquerydebounce: '/js/extern/jquery/jquery.ba-throttle-debounce',
-    underscore: '/js/extern/underscore/underscore',
-    backbone: '/js/extern/backbone/backbone',
-    bootstrap: '/js/extern/bootstrap/bootstrap',
-    crossfilter: '/js/extern/d3/d3.v2',
-    d3: '/js/extern/crossfilter/crossfilter',
-    dc: '/js/extern/dc/dc'
+    jquery: 'extern/jquery/jquery',
+    jqueryresize: 'extern/jquery/jquery.ba-resize',
+    jquerydebounce: 'extern/jquery/jquery.ba-throttle-debounce',
+    underscore: 'extern/underscore/underscore',
+    backbone: 'extern/backbone/backbone',
+    bootstrap: 'extern/bootstrap/bootstrap',
+    crossfilter: 'extern/d3/d3.v2',
+    d3: 'extern/crossfilter/crossfilter',
+    dc: 'extern/dc/dc'
   },
   shim: {
       'jquery': {

@@ -2,6 +2,8 @@ var config = {
 
   authUrl: 'https://identity.api.rackspacecloud.com/v2.0',
 
+  static_path: 'static_build', // use 'static' for development
+
   // listen port (overidden by command-line)
   listen_port: 3000,
 
