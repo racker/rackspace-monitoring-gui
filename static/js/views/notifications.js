@@ -169,7 +169,7 @@ define([
 
     });
 
-    var NotificationPlanSelectView = Backbone.View.extend({
+    var NotificationSelectView = Backbone.View.extend({
 
         template: _.template("<tr><td><%= label %></td><td><%= id %></td><td><%= type %></td><td><%= details %></td></td></tr>"),
         edit_template: _.template("<tr><td><%= label %></td><td><%= id %></td><td><%= type %></td><td><%= details %></td><td><a class='clickable remove' id='<%= id %>'>remove</a></td></tr>"),
@@ -278,17 +278,17 @@ define([
             body.append($('<h3>').append('ok_state'));
             this._okState = $('<div>').addClass('row').addClass('span12');
             body.append(this._okState);
-            this._okStateView = new NotificationPlanSelectView({el: this._okState, filter: this.model.getOk.bind(this.model)});
+            this._okStateView = new NotificationSelectView({el: this._okState, filter: this.model.getOk.bind(this.model)});
 
             body.append($('<h3>').append('warning_state'));
             this._warningState = $('<div>').addClass('row').addClass('span12');
             body.append(this._warningState);
-            this._warningStateView = new NotificationPlanSelectView({el: this._warningState, filter: this.model.getWarning.bind(this.model)});
+            this._warningStateView = new NotificationSelectView({el: this._warningState, filter: this.model.getWarning.bind(this.model)});
 
             body.append($('<h3>').append('critical_state'));
             this._criticalState = $('<div>').addClass('row').addClass('span12');
             body.append(this._criticalState);
-            this._criticalStateView = new NotificationPlanSelectView({el: this._criticalState, filter: this.model.getCritical.bind(this.model)});
+            this._criticalStateView = new NotificationSelectView({el: this._criticalState, filter: this.model.getCritical.bind(this.model)});
 
 
             return body;
@@ -341,6 +341,83 @@ define([
             }
 
         }
+    });
+
+    var NotificationPlanSelect = Backbone.View.extend({
+
+        viewTemplate: _.template(
+            "<dt><strong><%= key %></strong></dt>" +
+            "<dd><%= value %>&nbsp;</dd>"
+        ),
+
+        editTemplate: _.template(
+            "<select>" +
+                "<% _.each(notification_plans, function(np) { %>" +
+                    "<option value='<%= np.id %>'><%= np.label %> (<%= np.id %>)</option>" +
+                "<% }); %>" +
+            "</select>"
+        ),
+
+
+        initialize: function(opts) {
+
+            this.alarm = opts.alarm;
+            this.notificationPlanCollection = opts.notificationPlanCollection;
+
+            this._display = $('<dl>').addClass('dl-horizontal');
+
+            this._edit = $('<dl>').addClass('dl-horizontal');
+            this._edit.append("<dt><strong>notification_plan</strong></dt>");
+            this._edit.hide();
+            this._planSelect = $('<select>');
+
+            this._edit.append($('<dd>').append(this._planSelect));
+
+            this.$el.append(this._display, this._edit);
+
+            this.notificationPlanCollection.fetch({success: this._populate.bind(this), error: function () {this.$el.html('error fetching notification plans');}});
+
+            if (this.alarm) {
+                this.alarm.on('change', this._populate.bind(this));
+            }
+        },
+
+        _populate: function () {
+
+            this._planSelect.html(this.editTemplate({notification_plans: this.notificationPlanCollection.toJSON()}));
+            if (this.alarm) {
+                /* we have to pre-set the target selector with existing values */
+                this._planSelect.find('option[value=' + this.alarm.get('notification_plan_id') +']').attr('selected', 'selected');
+
+                var val;
+                var p = this.notificationPlanCollection.get(this.alarm.get('notification_plan_id'));
+                if (p) {
+                    val = p.get('label') + ' (' + p.id + ')';
+                } else {
+                    val = this.alarm.get('notification_plan_id');
+                }
+                this._display.empty();
+                this._display.append(this.viewTemplate({key: 'notification_plan', value: val}));
+            }
+        },
+
+        render: function (edit) {
+
+            if (edit) {
+                this._display.hide();
+                this._edit.show();
+            } else {
+                this._display.show();
+                this._edit.hide();
+            }
+
+            return this.$el;
+        },
+
+        getValues: function () {
+            return this._planSelect.val();
+        }
+
     });
 
     var renderNotificationsList = function () {
@@ -401,5 +478,5 @@ define([
         App.getInstance().account.notification_plans.fetch({success: _fetchSuccess, error: _fetchError});
     };
 
-    return {renderNotificationsList: renderNotificationsList, renderNotificationPlanDetails: renderNotificationPlanDetails};
+    return {NotificationPlanSelect: NotificationPlanSelect, renderNotificationsList: renderNotificationsList, renderNotificationPlanDetails: renderNotificationPlanDetails};
 });

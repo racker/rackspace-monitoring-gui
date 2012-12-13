@@ -635,7 +635,7 @@ define([
                     crumb.html(model.get('label') + ' (' + model.id + ')');
                     crumb.addClass('active');
                 } else {
-                   crumb.append($('<a>').attr('href', model.getLink()).html(model.get('label') + '(' + model.id + ')'));
+                   crumb.append($('<a>').attr('href', model.getLink()).html(model.get('label') + ' (' + model.id + ')'));
                    crumb.append($('<span>').addClass('divider').html('/'));
                 }
                 bc.append(crumb);

@@ -212,7 +212,7 @@ define([
     /* ALARMS */
     var Alarm = Backbone.Model.extend({
         urlRoot: function() {
-            return BASE_URL + '/entities/' + this.get('entity_id') + '/alarms/' + this.get('id');
+            return BASE_URL + '/entities/' + this.get('entity_id') + '/alarms/';
         },
         save: function(attributes, options) {
             attributes = typeof attributes !== 'undefined' ? attributes : {};
@@ -224,6 +224,34 @@ define([
         },
         getLink: function () {
             return '#entities/' + this.get('entity_id') + '/alarms/' + this.id;
+        },
+        sync: function(method, model, options) {
+
+            function doSuccess(resp, status, xhr) {
+                var id = xhr.getResponseHeader('Location').split('/').pop();
+
+                resp = {id: id};
+                xhr.responseText = JSON.stringify(resp);
+
+                options['success'](resp, status, xhr);
+            }
+
+            function doError(model, response) {
+                options['error'](model, response);
+            }
+
+            if(method === 'create') {
+                var newOptions = _.reject(options, function(key) {
+                    return key === 'success' || key === 'error';
+                });
+                newOptions['success'] = doSuccess;
+                newOptions['error'] = doError;
+                var response = Backbone.sync(method, model, newOptions);
+
+            } else {
+                return Backbone.sync(method, model, options);
+            }
+
         }
     });
 
@@ -572,9 +600,10 @@ define([
         }
     });
 
-    return {'Account': Account,
-            'Entity': Entity,
-            'Check': Check,
-            'Metric': Metric,
-            'SavedGraph': SavedGraph};
+    return {Account: Account,
+            Entity: Entity,
+            Check: Check,
+            Metric: Metric,
+            SavedGraph: SavedGraph,
+            Alarm: Alarm};
 });

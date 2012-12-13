@@ -472,7 +472,6 @@ define([
                 new_check.monitoring_zones_poll = this._monitoringZonesView.getValues();
             }
             new_check.metadata = this._metadataView.getValues();
-            new_check.monitoring_zones_poll = this._monitoringZonesView.getValues();
             new_check.details = this._detailsView.getValues();
 
             this.model.save(new_check, {success: _success.bind(this), error: _error.bind(this)});
