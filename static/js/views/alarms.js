@@ -236,14 +236,16 @@ define([
                 window.location.hash = 'entities/' + entity.id;
                 return;
             }
-
-            entity.checks.fetch({success: function (collection) {
-                var check = collection.get(alarm.get('check_id'));
                 
-                var alarmDetailsView = new AlarmDetailsView({el: $("#alarm-details-view-content"), model: alarm});
+            var alarmDetailsView = new AlarmDetailsView({el: $("#alarm-details-view-content"), model: alarm});
+            alarmDetailsView.render();
+            Views.renderView('alarm-details', [entity, alarm]);
+
+
+            var check = entity.checks.get(alarm.get('check_id'));
+            if (check) {
                 Views.renderView('alarm-details', [entity, check, alarm]);
-                alarmDetailsView.render();
-            }});
+            }
 
         }
 
