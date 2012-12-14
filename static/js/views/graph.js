@@ -206,13 +206,6 @@ define([
     function _renderGraph() {
         dc.deregisterAllCharts();
 
-
-        // plotView = new GraphViews.PlotterView({el: "#chart-container", model: getCurrentGraph()});
-        // plotView.render();
-
-        // var savedGraphListView = new GraphViews.SavedGraphListView({el: $("#saved-graph-container"), collection: App.getInstance().account.graphs});
-        // savedGraphListView.render();
-
         if (graphView) {
             graphView.destroy();
         }

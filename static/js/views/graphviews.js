@@ -51,10 +51,7 @@ define([
             }
         },
 
-
         initialize: function(opts) {
-
-            // this.setPeriod(this.dates.day.offset, true);
 
         },
 
@@ -107,19 +104,6 @@ define([
         },
 
         initialize: function() {
-            // this.$loading_el = $('<img>')
-            //                         .addClass('chart-spinner')
-            //                         .attr('src', '/images/loading_spinner.gif');
-            // this.$el.append(this.$loading_el);
-
-            // this.$title_el = $('<h4>').addClass('chart-title');
-            // this.$el.append(this.$title_el);
-
-
-
-
-            // this.$chart_el = $('<div>').attr('id', this.chart_id);
-            // this.$el.append(this.$chart_el);
 
             this.chart_id = "chart-" + (this.model.id || this.model.cid);
             this.$el.attr('id', this.chart_id);
@@ -232,8 +216,7 @@ define([
                 return;
             }
 
-            // this.$chart_el.fadeTo(1, 0.1);
-            // this.$loading_el.show();
+            this.$el.fadeTo(1, 0.4);
 
             return $.when.apply(this, this._getCharts(this.chart)).done(function(){
 
@@ -256,9 +239,8 @@ define([
 
                 dc.renderAll(this.chart_id);
 
-                // this.$loading_el.hide();
-                // this.$chart_el.fadeTo(100, 1);
-                // this.$title_el.html(this.model.get('name'));
+                this.$el.fadeTo(100, 1);
+
             }.bind(this));
         }
     });
@@ -269,7 +251,7 @@ define([
      */
     var LegendRowView = Backbone.View.extend({
         tagName: 'tr',
-        template: _.template("<td><%= entityLabel %></td><td><%= checkLabel %></td><td><%= metricName %>&nbsp;<i class='icon-remove delete clickable'></i></td>"),
+        template: _.template("<td><%= entityLabel %></td><td><%= checkLabel %></td><td><span class='label <%= cssClass %>'><%= metricName %>&nbsp;<i class='icon-remove delete clickable'></i></span></td>"),
 
         events: {'click .delete': 'deleteHandler'},
 
@@ -281,9 +263,7 @@ define([
         },
 
         deleteHandler: function () {
-            _getCurrentGraph().removeSeries(this.series);
-            _getCurrentGraph().save();
-            _renderGraph(_getCurrentGraph());
+            App.getInstance().currentGraph.removeSeries(this.series);
         },
 
 
@@ -298,7 +278,7 @@ define([
                                             entityLabel: this.entity.get('label'),
                                             checkLabel: this.check.get('label'),
                                             metricName: this.model.get('name'),
-                                            cssClass: this.series}));
+                                            cssClass: this.cssClass}));
                     }.bind(this)});
                 }.bind(this)});
             }.bind(this)});
@@ -312,6 +292,11 @@ define([
     var LegendView = Backbone.View.extend({
 
         _seriesCount: 0,
+
+        initialize: function() {
+            this.model.on('change', this.render.bind(this));
+        },
+
         render: function()
         {
             this._seriesCount = 0;
@@ -329,7 +314,7 @@ define([
         {
             var e = new LegendRowView({
                 series: s,
-                seriesClass: '_' + this._seriesCount
+                cssClass: '_' + this._seriesCount
             });
             this._seriesCount++;
             e.render();
