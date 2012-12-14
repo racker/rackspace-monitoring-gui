@@ -9,43 +9,6 @@ define([
   'jquerydebounce'
 ], function($, Backbone, _, App, Models, Views, CheckViews) {
 
-    var CheckView = Backbone.View.extend({
-        tagName: 'tr',
-        template: _.template("<td><a href='#/entities/<%= entity_id %>/checks/<%= id %>'><%= label %></a></td><td><%= id %></td>"),
-
-        events: {},
-
-        render: function () {
-            $(this.el).html(this.template(this.model.toJSON()));
-        }
-    });
-
-    var CheckListView = Backbone.View.extend({
-        el: $('#entity-checks-list'),
-        events: {},
-
-        initialize: function()
-        {
-            this._cache = {};
-        },
-
-        render: function()
-        {
-            $(this.el).empty();
-            return this;
-        },
-
-        add: function(m)
-        {
-            var e = new CheckView({
-                model: m
-            });
-            this._cache[m.get('id')] = e;
-            e.render();
-            $(this.el).append(e.el);
-        }
-    });
-
     var EntityDetailsView = Views.DetailsView.extend({
 
         _makeBody: function() {
@@ -149,7 +112,9 @@ define([
         },
 
         deleteHandler: function () {
-            this.model.destroy();
+
+            /* TODO: display errors */
+            this.model.destroy({wait: true});
             this._modal.hide();
         }
     });
@@ -181,7 +146,7 @@ define([
                 } catch (e) {
                     r = {'name': 'UnknownError', 'message': 'UnknownError: An unknown error occured.'};
                 }
-                this.error(r.message);
+                this.error(r);
                 this._modal.hide();
             }
             e = new Models.Entity({label: label});
@@ -205,9 +170,9 @@ define([
     };
 
     var renderEntitiesList = function () {
-        Views.renderView('entity-list');
+        Views.renderView('entities');
 
-        var entitiesView = new EntityListView({el: $("#entity-list-view-content"), collection: App.getInstance().account.entities});
+        var entitiesView = new EntityListView({el: $("#entities-view-content"), collection: App.getInstance().account.entities});
         entitiesView.render();
     };
 

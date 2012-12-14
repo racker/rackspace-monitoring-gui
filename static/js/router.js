@@ -7,13 +7,16 @@ define([
   'views/entities',
   'views/checks',
   'views/alarms',
-  'views/graph'
-], function($, Backbone, _, Views, EntityViews, CheckViews, AlarmViews, Graph) {
+  'views/graph',
+  'views/notifications'
+], function($, Backbone, _, Views, EntityViews, CheckViews, AlarmViews, Graph, NotificationViews) {
 
   var router;
   var started = false;
 
   var _addRouteHandlers = function () {
+    router.on('route:notificationsRoute', function () {NotificationViews.renderNotificationsList();});
+    router.on('route:notificationPlanDetailsRoute', function (id) {NotificationViews.renderNotificationPlanDetails(id);});
     router.on('route:entitiesRoute', function () {EntityViews.renderEntitiesList();});
     router.on('route:entityDetailsRoute', function (id) {EntityViews.renderEntityDetails(id);});
     router.on('route:checkDetailsRoute', function (id, cid) {CheckViews.renderCheckDetails(id, cid);});
@@ -29,6 +32,8 @@ define([
       var Router = Backbone.Router.extend({
           
           routes: {
+              "notifications": "notificationsRoute",
+              "notification_plans/:id": "notificationPlanDetailsRoute",
               "entities": "entitiesRoute",
               "entities/:id": "entityDetailsRoute",
               "entities/:id/checks/:cid": "checkDetailsRoute",

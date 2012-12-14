@@ -232,89 +232,8 @@ define([
 
     });
 
-    var CheckDetails = Backbone.View.extend({
-
-        booleanFields: ['starttls', 'follow_redirects', 'ssl'],
-
-        viewTemplate: _.template(
-            "<dt><strong><%= key %></strong></dt>" +
-            "<dd><%= value %>&nbsp;</dd>"
-        ),
-
-        viewBooleanTemplate: _.template(
-            "<dt><strong><%= key %></strong></dt>" +
-            "<dd><input name='<%= key %>' type='checkbox' <%= value %> disabled='disabled'</dd>"
-        ),
-
-        editTextTemplate: _.template(
-            "<dt><label><strong><%= key %></strong><%= optional %></label></dt>" +
-            "<dd><input type='text' name='<%= key %>' value='<%= value %>' placeholder='<%= description %>' /></dd>"
-        ),
-
-        editBooleanTemplate: _.template(
-            "<dt><strong><%= key %></strong></dt>" +
-            "<dd><input name='<%= key %>' type='checkbox' <%= value %>></dd>"
-        ),
-
-        initialize: function(opts) {
-
-            this.check = opts.check;
-
-        },
-
-        render: function (edit, type) {
-
-            this.$el.empty();
-            var t, v, val;
-
-            _.each(type.get('fields'), function (field) {
-
-                val = null;
-
-                if (edit) {
-                    t = this.editTextTemplate;
-                    if (_.indexOf(this.booleanFields, field.name) > -1) {
-                        t = this.editBooleanTemplate;
-                    }
-                } else {
-                    t = this.viewTemplate;
-                    if (_.indexOf(this.booleanFields, field.name) > -1) {
-                        t = this.viewBooleanTemplate;
-                    }
-                }
-
-                /* Need to display the actual value if we are editing a real check */
-                if (this.check) {
-                    if (_.indexOf(this.booleanFields, field.name) !== -1) {
-                        val = this.check.get('details')[field.name] ? 'checked' : '';
-                    } else {
-                        val = this.check.get('details')[field.name];
-                    }
-                }
-
-                v = {key: field.name, value: val || '', description: field.description, optional: field.optional ? '(optional)' : ''};
-
-
-                this.$el.append(t(v));
-
-            }.bind(this));
-        },
-
-        getValues: function () {
-            var details = {};
-            _.each(this.$el.find('input'), function (el) {
-                var val;
-                var key = el.name;
-                if (el.type === 'checkbox') {
-                    details[key] = el.checked;
-                } else {
-                    if (el.value) {
-                        details[key] = el.value;
-                    }
-                }
-            });
-            return details;
-        }
+    var CheckDetails = Views.FormDetailsView.extend({
+        booleanFields: ['starttls', 'follow_redirects', 'ssl']
     });
 
     var NewCheckForm = Backbone.View.extend({
@@ -435,6 +354,11 @@ define([
     });
 
     var NewCheckModal = Views.Modal.extend({
+        _initialize: function (opts) {
+            this.checkTypesCollection = this.checkTypesCollection || opts.checkTypesCollection;
+            this.monitoringZonesCollection = this.monitoringZonesCollection || opts.monitoringZonesCollection;
+        },
+
         _makeBody: function () {
             var body = $('<div>').addClass('modal-body');
 
@@ -496,7 +420,7 @@ define([
 
             this._detailsView = new CheckDetails({
                 el: this._details,
-                check: this.model
+                model: this.model
             });
 
             App.getInstance().account.check_types.fetch({
@@ -548,7 +472,6 @@ define([
                 new_check.monitoring_zones_poll = this._monitoringZonesView.getValues();
             }
             new_check.metadata = this._metadataView.getValues();
-            new_check.monitoring_zones_poll = this._monitoringZonesView.getValues();
             new_check.details = this._detailsView.getValues();
 
             this.model.save(new_check, {success: _success.bind(this), error: _error.bind(this)});

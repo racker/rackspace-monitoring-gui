@@ -7,8 +7,6 @@ define([
   'jquerydebounce'
 ], function($, Backbone, _, App, Models) {
 
-    var checkDetailsView, alarmDetailsView;
-
     /**
      * Generic Key Value Object View
      * @extends Backbone.View
@@ -433,6 +431,8 @@ define([
 
         initialize: function (opts) {
 
+            this._initialize(opts);
+
             this.$el.empty();
 
             // opts
@@ -442,10 +442,6 @@ define([
             this.input = opts.input;
             this.label = opts.label;
             this.body = opts.body;
-
-            // optional
-            this.checkTypesCollection = this.checkTypesCollection || opts.checkTypesCollection;
-            this.monitoringZonesCollection = this.monitoringZonesCollection || opts.monitoringZonesCollection;
 
             // main element
             $(this.el).addClass('modal hide fade');
@@ -457,6 +453,8 @@ define([
                 $(this.el).on('hidden', this.onCancel.bind(this));
             }
         },
+
+        _initialize: function (opts) {},
 
         _makeHeader: function () {
 
@@ -487,10 +485,9 @@ define([
 
         _makeFooter: function () {
             var dismissButton = $('<button>')
-                                    .attr('data-dismiss', 'modal')
-                                    .attr('type', 'button')
-                                    .addClass('close')
-                                    .html('Cancel');
+                                    .addClass('btn')
+                                    .html('Cancel')
+                                    .click(function (e) {this.hide();}.bind(this));
             var confirmButton = $('<button>')
                                     .addClass('btn btn-primary')
                                     .html('Confirm');
@@ -529,6 +526,93 @@ define([
         }
     });
 
+    /**
+     * Generic Details View
+     * @extends Backbone.View
+     *
+     * Key/Value object view/editor that can optionally take an instance of the abstract model to provide defaults
+     */
+    var FormDetailsView = Backbone.View.extend({
+
+        booleanFields: [],
+
+        viewTemplate: _.template(
+            "<dt><strong><%= key %></strong></dt>" +
+            "<dd><%= value %>&nbsp;</dd>"
+        ),
+
+        viewBooleanTemplate: _.template(
+            "<dt><strong><%= key %></strong></dt>" +
+            "<dd><input name='<%= key %>' type='checkbox' <%= value %> disabled='disabled'</dd>"
+        ),
+
+        editTextTemplate: _.template(
+            "<dt><label><strong><%= key %></strong><%= optional %></label></dt>" +
+            "<dd><input type='text' name='<%= key %>' value='<%= value %>' placeholder='<%= description %>' /></dd>"
+        ),
+
+        editBooleanTemplate: _.template(
+            "<dt><strong><%= key %></strong></dt>" +
+            "<dd><input name='<%= key %>' type='checkbox' <%= value %>></dd>"
+        ),
+
+        render: function (edit, type) {
+
+            this.$el.empty();
+            var t, v, val;
+
+            _.each(type.get('fields'), function (field) {
+
+                val = null;
+
+                if (edit) {
+                    t = this.editTextTemplate;
+                    if (_.indexOf(this.booleanFields, field.name) > -1) {
+                        t = this.editBooleanTemplate;
+                    }
+                } else {
+                    t = this.viewTemplate;
+                    if (_.indexOf(this.booleanFields, field.name) > -1) {
+                        t = this.viewBooleanTemplate;
+                    }
+                }
+
+                /* Need to display the actual value if we are editing a real check */
+                if (this.model) {
+                    if (_.indexOf(this.booleanFields, field.name) !== -1) {
+                        val = this.model.get('details')[field.name] ? 'checked' : '';
+                    } else {
+                        val = this.model.get('details')[field.name];
+                    }
+                }
+
+                v = {key: field.name, value: val || '', description: field.description, optional: field.optional ? '(optional)' : ''};
+
+
+                this.$el.append(t(v));
+
+            }.bind(this));
+
+            return this.$el;
+        },
+
+        getValues: function () {
+            var details = {};
+            _.each(this.$el.find('input'), function (el) {
+                var val;
+                var key = el.name;
+                if (el.type === 'checkbox') {
+                    details[key] = el.checked;
+                } else {
+                    if (el.value) {
+                        details[key] = el.value;
+                    }
+                }
+            });
+            return details;
+        }
+    });
+
     /* Hides/Shows Relevant Stuff depending on the view */
     var renderView = function (view, models) {
 
@@ -551,7 +635,7 @@ define([
                     crumb.html(model.get('label') + ' (' + model.id + ')');
                     crumb.addClass('active');
                 } else {
-                   crumb.append($('<a>').attr('href', model.getLink()).html(model.get('label') + '(' + model.id + ')'));
+                   crumb.append($('<a>').attr('href', model.getLink()).html(model.get('label') + ' (' + model.id + ')'));
                    crumb.append($('<span>').addClass('divider').html('/'));
                 }
                 bc.append(crumb);
@@ -560,8 +644,6 @@ define([
         } else {
             bc.hide();
         }
-        
-
     };
 
     var renderAccount = function () {
@@ -581,6 +663,8 @@ define([
             ListElementView: ListElementView,
             KeyValueView: KeyValueView,
             DetailsView: DetailsView,
+            FormDetailsView: FormDetailsView,
+
             renderView: renderView,
             'renderAccount': renderAccount,
             'renderLoading': renderLoading,
