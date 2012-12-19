@@ -114,6 +114,25 @@ define([
 
         },
 
+        setPeriodicRefresh: function(seconds) {
+            if(this.timerPeriod != seconds) {
+                clearTimeout(this.timer);
+                this.timerPeriod = seconds;
+                this.periodicRefresh();
+            }
+
+        },
+
+        periodicRefresh: function() {
+            clearTimeout(this.timer);
+            console.log("fired");
+            if(window.location.hash.match(/^#grapher/)){
+                this.render();
+                console.log("rendered");
+            }
+            this.timer = setTimeout(this.periodicRefresh.bind(this), this.timerPeriod*1000);
+        },
+
         /*
          * returns a Date() object
          * offset - a key in the 'dates' object or 'now'
@@ -240,6 +259,8 @@ define([
                 dc.renderAll(this.chart_id);
 
                 this.$el.fadeTo(100, 1);
+
+                this.setPeriodicRefresh(60);
 
             }.bind(this));
         }
