@@ -130,6 +130,201 @@ define([
         }
     });
 
+    var AlarmTestView = Backbone.View.extend({
+
+        initialize: function (opts) {
+            this.$el.empty();
+
+            this.check = opts.check;
+            this.alarm = opts.alarm;
+
+            // Controls
+            this._controlsContainer = $('<div>');
+            this._testButton = $('<button>').addClass('btn btn-primary').html('Test Alarm');
+            this._testButton.click(this.doTest.bind(this));
+
+            this._checkDataButton = $('<button>').addClass('btn btn-mini').html('populate check data');
+            this._checkDataButton.click(this.populateCheckData.bind(this));
+
+            this._controlsContainer.append(this._checkDataButton);
+
+            this._resultsContainer = $('<div>').addClass('accordion');
+            this._showDetailsLink = $('<button>').addClass('btn btn-mini').html('Show Details');
+
+            this._resultsBody = $('<div>');
+
+            this._alarmResultsContainer = $('<div>');
+
+            this._controls = $('<span>')
+                .append(this._controlsContainer, this._resultsContainer);
+
+            // Details
+            this.$el.append(this._controls, this._resultsBody);
+        },
+
+        _makeResultsView: function (res) {
+            var resultsView = new Views.KeyValueView({
+                model: res,
+                editKeys: false,
+                ignoredKeys: ['metrics'],
+                formatters: {
+                    timestamp: function (val) {return (new Date(val));}
+                }
+            });
+
+            return resultsView.render();
+        },
+
+        _makeMetricsView: function (res) {
+            var t = _.template(
+                "<dt><strong><%= key %></strong></dt>" +
+                "<dd><%= value.data %> (type: <%= value.type %>)&nbsp;</dd>"
+            );
+
+            var resultsView = new Views.KeyValueView({
+                model: res,
+                modelKey: 'metrics',
+                keyValueTemplate: t,
+                editKeys: false,
+                ignoredKeys: ['metrics'],
+                formatters: {
+                    timestamp: function (val) {return (new Date(val));}
+                }
+            });
+
+            return resultsView.render();
+        },
+
+        _makeErrorView: function (res) {
+            var resultsView = new Views.KeyValueView({
+                json: res
+            });
+            return resultsView.render();
+        },
+
+        populateCheckData: function () {
+
+            function _success (collection) {
+                this._resultsContainer.empty();
+                this._resultsContainer.append(this._resultLabelOK);
+                this._checkDataButton.removeAttr('disabled');
+
+                collection.each(function (res) {
+                    var _testData = $('<div>').addClass('accordion-inner');
+                    _testData.append('<dt><h4>details</h4></dt>');
+                    _testData.append(this._makeResultsView(res));
+                    _testData.append('<dt><h4>metrics</h4></dt>');
+                    _testData.append(this._makeMetricsView(res));
+
+                    var _body = $('<div>').addClass('accordion-body collapse');
+                    _body.append(_testData);
+
+                    var _label = $('<span>').addClass('label');
+                    _label.addClass(res.get('available') ? 'label-success' : 'label-warning');
+
+                    var resultString = res.get('monitoring_zone_id') ? 'monitoring zone: ' + res.get('monitoring_zone_id') + ' ' : '';
+                    resultString += 'available: ' + res.get('available') + ' status: ' + res.get('status');
+                    _label.html(resultString);
+                    var _header = $('<a>').addClass('accordion-toggle').click(function () {_body.collapse('toggle');});
+                    _header.append(_label);
+                    
+                    var _group = $('<div>').addClass('accordion-group').append(
+                        $('<div>').addClass('accordion-heading').append(_header),
+                        _body
+                    );
+
+                    this._resultsBody.append(_group);
+                }.bind(this));
+
+                // append alarm test button and container for the results
+                this.$el.append(this._testButton, this._alarmResultsContainer);
+            }
+
+            function _error (collection, xhr) {
+                this._resultsContainer.empty();
+                this._testButton.removeAttr('disabled');
+
+                var response = {type: 'Unknown Error', message: 'An Unknown Error Occured'};
+                try {
+                    response = JSON.parse(xhr.responseText);
+                } catch (e) {}
+
+                var _testData = $('<div>').addClass('accordion-inner');
+                _testData.append('<dt><h4>details</h4></dt>');
+                _testData.append(this._makeErrorView(response));
+                
+                var _body = $('<div>').addClass('accordion-body collapse');
+                _body.append(_testData);
+
+                var _label = $('<span>').addClass('label label-important');
+                _label.html('type: ' + response.type + ' message: ' + response.message);
+                var _header = $('<a>').addClass('accordion-toggle').click(function () {_body.collapse('toggle');});
+                _header.append(_label);
+                
+                var _group = $('<div>').addClass('accordion-group').append(
+                    $('<div>').addClass('accordion-heading').append(_header),
+                    _body
+                );
+
+                this._resultsBody.append(_group);
+            }
+
+            this._resultsBody.empty();
+            this._resultsContainer.empty();
+            this._checkDataButton.attr('disabled', 'disabled');
+            this._resultsContainer.append(Views.spinner());
+            this.check.test.fetch({type: 'POST',
+                                   success: _success.bind(this),
+                                   error: _error.bind(this)});
+
+        },
+
+        doTest: function () {
+
+            function _success (collection) {
+                this._alarmResultsContainer.empty();
+                this._testButton.removeAttr('disabled');
+
+                var response = this.collection.toJSON()[0];
+
+                var _label = $('<span>').addClass('label');
+                if (response.state === 'OK') {
+                    _label.addClass('label-success');
+                } else if (response.state === 'CRITICAL') {
+                    _label.addClass('label-important');
+                } else if (response.state === 'WARNING') {
+                    _label.addClass('label-warning');
+                }
+                _label.html('state: ' + response.state + ' status: ' + response.status);
+                this._alarmResultsContainer.append(_label);
+            }
+
+            function _error (collection, xhr) {
+                this._alarmResultsContainer.empty();
+                this._testButton.removeAttr('disabled');
+
+                var response = JSON.parse(xhr.responseText);
+                var _label = $('<span>').addClass('label label-important');
+                _label.html('ERROR - type: ' + response.type + ' messsage: ' + response.message);
+                this._alarmResultsContainer.append(label);
+            }
+
+            this._alarmResultsContainer.empty();
+            this._testButton.attr('disabled', 'disabled');
+
+            var data = {};
+            data.criteria = this.alarm.get('criteria');
+            data.check_data = this.check.test.toJSON();
+            this.collection.fetch({success: _success.bind(this),
+                                   error: _error.bind(this),
+                                   data: JSON.stringify(data),
+                                   type: 'POST',
+                                   processData: false,
+                                   contentType: 'application/json'});
+
+        }
+
+    });
 
     var AlarmDetailsView = Views.DetailsView.extend({
 
@@ -165,12 +360,18 @@ define([
             this._metadata = $('<dl>').addClass('dl-horizontal');
             body.append(this._metadata);
 
+            body.append($('<h3>').append('test'));
+            this._test = $('<div>');
+            body.append(this._test);
+
             this._metadataView = new Views.KeyValueView({
                 el: this._metadata,
                 modelKey: 'metadata',
                 model: this.model,
                 editKeys: true
             });
+
+            this._testView = new AlarmTestView({el: this._test, collection: this.model.test, alarm: this.model, check: this.model.getCheck()});
 
             return body;
         },
@@ -222,6 +423,31 @@ define([
         }
     });
 
+    var _getCheck = function (entity, check_id, callback) {
+
+        function _fetchSuccess (collection) {
+            var check = collection.get(check_id);
+
+            if (!check) {
+                callback(true, null);
+            } else {
+                callback(null, check);
+            }
+        }
+
+        function _fetchError (collection) {
+            callback(true, null);
+        }
+
+        var check = entity.checks.get(check_id);
+        if (!check) {
+            entity.checks.fetch({success: _fetchSuccess.bind(this), error: _fetchError.bind(this)});
+        } else {
+            callback(null, check);
+        }
+
+    };
+
     var renderAlarmDetails = function (eid, aid) {
 
         var entity = App.getInstance().account.entities.get(eid);
@@ -237,16 +463,15 @@ define([
                 return;
             }
                 
-            var alarmDetailsView = new AlarmDetailsView({el: $("#alarm-details-view-content"), model: alarm});
-            alarmDetailsView.render();
-            Views.renderView('alarm-details', [entity, alarm]);
-
-
-            var check = entity.checks.get(alarm.get('check_id'));
-            if (check) {
-                Views.renderView('alarm-details', [entity, check, alarm]);
-            }
-
+            _getCheck(entity, alarm.get('check_id'), function (err, check) {
+                if (err) {
+                    window.location.hash = 'entities/' + entity.id;
+                } else {
+                    var alarmDetailsView = new AlarmDetailsView({el: $("#alarm-details-view-content"), model: alarm});
+                    alarmDetailsView.render();
+                    Views.renderView('alarm-details', [entity, check, alarm]);
+                }
+            });
         }
 
         function _fetchError (collection) {

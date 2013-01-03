@@ -19,6 +19,8 @@ define([
      * @param {Object} opts.formatters Map of object attributes to functions
      */
     var KeyValueView = Backbone.View.extend({
+        tagName: 'dl',
+        className: 'dl-horizontal',
         keyValueTemplate: _.template(
             "<dt><strong><%= key %></strong></dt>" +
             "<dd><%= value %>&nbsp;</dd>"
@@ -42,6 +44,10 @@ define([
         initialize: function (opts) {
             this.$el.empty();
 
+            // allow custom template
+            this.keyValueTemplate = opts.keyValueTemplate || this.keyValueTemplate;
+            
+            this.json = opts.json || false;
             this.modelKey = this.modelKey || opts.modelKey;
             this.editableKeys = this.editableKeys || opts.editableKeys || [];
             this.editKeys = this.editKeys || opts.editKeys || false;
@@ -103,7 +109,10 @@ define([
 
         render: function (edit) {
 
-            var m = this.modelKey ? this.model.get(this.modelKey) : this.model.toJSON();
+            var m = this.json;
+            if (!m) {
+                m = this.modelKey ? this.model.get(this.modelKey) : this.model.toJSON();
+            }
 
             this.$el.empty();
             _.each(m, function (value, key) {
@@ -613,6 +622,10 @@ define([
         }
     });
 
+    var spinner = function () {
+        return $('<img>').attr('src', '/images/loading_spinner.gif');
+    };
+
     /* Hides/Shows Relevant Stuff depending on the view */
     var renderView = function (view, models) {
 
@@ -665,6 +678,7 @@ define([
             DetailsView: DetailsView,
             FormDetailsView: FormDetailsView,
 
+            spinner: spinner,
             renderView: renderView,
             'renderAccount': renderAccount,
             'renderLoading': renderLoading,

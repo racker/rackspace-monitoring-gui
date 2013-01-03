@@ -375,6 +375,146 @@ define([
         }
     });
 
+    var CheckTestView = Backbone.View.extend({
+
+        keyValueTemplate: _.template(
+            "<dt><strong><%= key %></strong></dt>" +
+            "<dd><%= value %>&nbsp;</dd>"
+        ),
+
+
+        initialize: function (opts) {
+            this.$el.empty();
+
+            // Controls
+            this._controlsContainer = $('<div>');
+            this._testButton = $('<button>').addClass('btn btn-primary').html('Test Check');
+            this._testButton.click(this.doTest.bind(this));
+            this._controlsContainer.append(this._testButton);
+
+            this._resultsContainer = $('<div>').addClass('accordion');
+            this._showDetailsLink = $('<button>').addClass('btn btn-mini').html('Show Details');
+
+            this._resultsBody = $('<div>');
+
+            this._controls = $('<span>')
+                .append(this._controlsContainer, this._resultsContainer);
+
+            // Details
+            this.$el.append(this._controls, this._resultsBody);
+        },
+
+        _makeResultsView: function (res) {
+            var resultsView = new Views.KeyValueView({
+                model: res,
+                editKeys: false,
+                ignoredKeys: ['metrics'],
+                formatters: {
+                    timestamp: function (val) {return (new Date(val));}
+                }
+            });
+
+            return resultsView.render();
+        },
+
+        _makeMetricsView: function (res) {
+            var t = _.template(
+                "<dt><strong><%= key %></strong></dt>" +
+                "<dd><%= value.data %> (type: <%= value.type %>)&nbsp;</dd>"
+            );
+
+            var resultsView = new Views.KeyValueView({
+                model: res,
+                modelKey: 'metrics',
+                keyValueTemplate: t,
+                editKeys: false,
+                ignoredKeys: ['metrics'],
+                formatters: {
+                    timestamp: function (val) {return (new Date(val));}
+                }
+            });
+
+            return resultsView.render();
+        },
+
+        _makeErrorView: function (res) {
+            var resultsView = new Views.KeyValueView({
+                json: res
+            });
+            return resultsView.render();
+        },
+
+        doTest: function () {
+
+            function _success (collection) {
+                this._resultsContainer.empty();
+                this._resultsContainer.append(this._resultLabelOK);
+                this._testButton.removeAttr('disabled');
+
+                collection.each(function (res) {
+                    var _testData = $('<div>').addClass('accordion-inner');
+                    _testData.append('<dt><h4>details</h4></dt>');
+                    _testData.append(this._makeResultsView(res));
+                    _testData.append('<dt><h4>metrics</h4></dt>');
+                    _testData.append(this._makeMetricsView(res));
+
+                    var _body = $('<div>').addClass('accordion-body collapse');
+                    _body.append(_testData);
+
+                    var _label = $('<span>').addClass('label');
+                    _label.addClass(res.get('available') ? 'label-success' : 'label-warning');
+
+                    var resultString = res.get('monitoring_zone_id') ? 'monitoring zone: ' + res.get('monitoring_zone_id') + ' ' : '';
+                    resultString += 'available: ' + res.get('available') + ' status: ' + res.get('status');
+                    _label.html(resultString);
+                    var _header = $('<a>').addClass('accordion-toggle').click(function () {_body.collapse('toggle');});
+                    _header.append(_label);
+                    
+                    var _group = $('<div>').addClass('accordion-group').append(
+                        $('<div>').addClass('accordion-heading').append(_header),
+                        _body
+                    );
+
+                    this._resultsBody.append(_group);
+                }.bind(this));
+            }
+
+            function _error (collection, xhr) {
+                this._resultsContainer.empty();
+                this._testButton.removeAttr('disabled');
+
+                var response = JSON.parse(xhr.responseText);
+
+                var _testData = $('<div>').addClass('accordion-inner');
+                _testData.append('<dt><h4>details</h4></dt>');
+                _testData.append(this._makeErrorView(response));
+                
+                var _body = $('<div>').addClass('accordion-body collapse');
+                _body.append(_testData);
+
+                var _label = $('<span>').addClass('label label-important');
+                _label.html('type: ' + response.type + ' message: ' + response.message);
+                var _header = $('<a>').addClass('accordion-toggle').click(function () {_body.collapse('toggle');});
+                _header.append(_label);
+                
+                var _group = $('<div>').addClass('accordion-group').append(
+                    $('<div>').addClass('accordion-heading').append(_header),
+                    _body
+                );
+
+                this._resultsBody.append(_group);
+            }
+
+            this._resultsBody.empty();
+            this._resultsContainer.empty();
+            this._testButton.attr('disabled', 'disabled');
+            this._resultsContainer.append(Views.spinner());
+            this.collection.fetch({type: 'POST', success: _success.bind(this), error: _error.bind(this)});
+
+        }
+
+    });
+
     var CheckDetailsView = Views.DetailsView.extend({
 
         _makeBody: function() {
@@ -401,6 +541,9 @@ define([
             body.append($('<h3>').append('metadata'));
             this._metadata = $('<dl>').addClass('dl-horizontal');
             body.append(this._metadata);
+
+            this._test = $('<div>');
+            body.append(this._test);
 
             this._alarms = $('<div>');
             body.append(this._alarms);
@@ -439,6 +582,8 @@ define([
                 model: this.model,
                 editKeys: true
             });
+
+            this._testView = new CheckTestView({el: this._test, collection: this.model.test});
 
             this._alarmsView = new AlarmViews.AlarmListView({el: this._alarms, collection: this.model.getEntity().alarms, check: this.model});
 

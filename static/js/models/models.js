@@ -209,8 +209,24 @@ define([
         }
     });
 
+    var AlarmTest = Backbone.Model.extend({});
+    function AlarmTestCollectionFactory(entity_id, alarm) {
+        var C = Backbone.Collection.extend({
+            entity_id: entity_id,
+            alarm: alarm,
+            model: AlarmTest,
+            url: function() {
+                return BASE_URL + '/entities/' + this.entity_id + '/test-alarm';
+            }
+        });
+        return new C();
+    }
+
     /* ALARMS */
     var Alarm = Backbone.Model.extend({
+        initialize: function() {
+            this.test = nestCollection(this, 'test', new AlarmTestCollectionFactory(this.get('entity_id'), this));
+        },
         urlRoot: function() {
             return BASE_URL + '/entities/' + this.get('entity_id') + '/alarms/';
         },
@@ -224,6 +240,14 @@ define([
         },
         getLink: function () {
             return '#entities/' + this.get('entity_id') + '/alarms/' + this.id;
+        },
+        getCheck: function () {
+            var e = App.getInstance().account.entities.get(this.get('entity_id'));
+            if (e) {
+                return e.checks.get(this.get('check_id'));
+            } else {
+                return null;
+            }
         },
         sync: function(method, model, options) {
 
@@ -251,7 +275,9 @@ define([
             } else {
                 return Backbone.sync(method, model, options);
             }
-
+        },
+        test: function(opts, callback) {
+            callback(null, {});
         }
     });
 
@@ -281,6 +307,24 @@ define([
 
             sync: function(method, model, options) {
                 return depaginatedRequest(this.url()).then(options.success, options.error);
+            }
+        });
+        return new C();
+    }
+
+    /* CHECKS */
+    var CheckTest = Backbone.Model.extend({});
+    function CheckTestCollectionFactory(entity_id, check) {
+        var C = Backbone.Collection.extend({
+            entity_id: entity_id,
+            check: check,
+            model: CheckTest,
+            url: function() {
+                if (this.check.id) {
+                    return BASE_URL + '/entities/' + this.entity_id + '/checks/' + this.check.id + '/test';
+                } else {
+                    return BASE_URL + '/entities/' + this.entity_id + '/test-check?debug=' + this.debug ? 'true' : 'false';
+                }
             }
         });
         return new C();
@@ -321,6 +365,7 @@ define([
         },
         initialize: function() {
             this.metrics = nestCollection(this, 'metrics', new CheckMetricCollectionFactory(this));
+            this.test = nestCollection(this, 'test', new CheckTestCollectionFactory(this.get('entity_id'), this));
         },
         save: function(attributes, options) {
             attributes = typeof attributes !== 'undefined' ? attributes : {};
@@ -335,6 +380,9 @@ define([
         },
         getLink: function () {
             return '#entities/' + this.get('entity_id') + '/checks/' + this.id;
+        },
+        test: function (opts, callback) {
+            callback(null, {});
         }
     });
 
