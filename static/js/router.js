@@ -30,7 +30,7 @@ define([
 
     if (!router) {
       var Router = Backbone.Router.extend({
-          
+
           routes: {
               "notifications": "notificationsRoute",
               "notification_plans/:id": "notificationPlanDetailsRoute",
@@ -45,7 +45,7 @@ define([
           },
 
           defaultRoute: function(path) {
-              window.location.hash = 'entities';
+              Backbone.history.navigate('entities', true);
           }
       });
 

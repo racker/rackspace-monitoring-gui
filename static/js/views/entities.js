@@ -108,7 +108,7 @@ define([
         template: _.template("<td><a class='details clickable'><%= label %></a></td><td><%= id %></td><td><i class='icon-remove delete clickable'></i></td>"),
 
         detailsHandler: function () {
-            window.location.hash = 'entities/' + this.model.id;
+            Backbone.history.navigate('entities/' + this.model.id, true);
         },
 
         deleteHandler: function () {
@@ -132,7 +132,7 @@ define([
                     success: function(e) {
                         this._modal.hide();
                         App.getInstance().account.entities.add(e);
-                        window.location.hash = 'entities/' + e.id;
+                        Backbone.history.navigate('entities/' + e.id, true);
                     }.bind(this), error: function(e) {
                         this.error('Error fetching ' + this.name);
                         this._modal.hide();
@@ -159,7 +159,7 @@ define([
 
         var model = App.getInstance().account.entities.get(id);
         if (!model) {
-            window.location.hash = 'entities';
+            Backbone.history.navigate('entities', true);
             return;
         }
 

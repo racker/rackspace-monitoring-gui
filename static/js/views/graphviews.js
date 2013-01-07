@@ -350,7 +350,7 @@ define([
         template: _.template("<a class='details clickable'><%= name %></a>&nbsp;<i class='icon-remove delete clickable'></i> "),
 
         detailsHandler: function () {
-            window.location.hash = 'grapher/' + this.model.id;
+            Backbone.history.navigate('grapher/' + this.model.id, true);
         },
 
         deleteHandler: function () {
@@ -394,7 +394,7 @@ define([
                     success: function(g) {
                         this._modal.hide();
                         App.getInstance().account.graphs.add(g);
-                        window.location.hash = 'grapher/' + g.id;
+                        Backbone.history.navigate('grapher/' + g.id, true);
                     }.bind(this), error: function(e) {
                         this.error('Error fetching ' + this.name);
                         this._modal.hide();

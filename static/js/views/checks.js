@@ -14,7 +14,7 @@ define([
         template: _.template("<td><a class='details clickable'><%= label %></a></td><td><%= id %></td><td><i class='icon-remove delete clickable'></i></td>"),
 
         detailsHandler: function () {
-            window.location.hash = 'entities/' + this.model.get('entity_id') + '/checks/' + this.model.id;
+            Backbone.history.navigate('entities/' + this.model.get('entity_id') + '/checks/' + this.model.id, true);
         },
 
         deleteHandler: function () {
@@ -36,7 +36,7 @@ define([
                     success: function(c) {
                         this._modal.hide();
                         this.collection.add(c);
-                        window.location.hash = 'entities/' + c.get('entity_id') + '/checks/' + c.id;
+                        Backbone.history.navigate('entities/' + c.get('entity_id') + '/checks/' + c.id, true);
                     }.bind(this), error: function(e) {
                         this.error('Error fetching ' + this.name);
                         this._modal.hide();
@@ -509,17 +509,17 @@ define([
 
 
     var renderCheckDetails = function (eid, cid) {
-  
+
         var entity = App.getInstance().account.entities.get(eid);
         if (!entity) {
-            window.location.hash = 'entities';
+            Backbone.history.navigate('entities', true);
             return;
         }
 
         function _fetchSuccess (collection) {
             var check = collection.get(cid);
             if (!check) {
-                window.location.hash = 'entities/' + entity.id;
+                Backbone.history.navigate('entities/' + entity.id, true);
                 return;
             }
             var checkDetailsView = new CheckDetailsView({el: $("#check-details-view-content"), model: check});
@@ -528,7 +528,7 @@ define([
         }
 
         function _fetchError (collection) {
-            window.location.hash = 'entities';
+            Backbone.history.navigate('entities', true);
         }
 
         entity.checks.fetch({success: _fetchSuccess, error: _fetchError});
