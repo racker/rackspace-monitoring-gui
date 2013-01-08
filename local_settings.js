@@ -18,7 +18,10 @@ var config = {
   },
 
   // session secret - change this
-  secret: 'ziifos7moiwe1eeghee4sha3uut3doh6eW9zaiquahshooTeh7'
+  secret: 'ziifos7moiwe1eeghee4sha3uut3doh6eW9zaiquahshooTeh7',
+
+  use_google_analytics: false,
+  google_analytics_id: 'UA-XXXXXXX-X'
 };
 
 module.exports = config;
