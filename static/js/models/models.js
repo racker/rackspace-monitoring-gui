@@ -48,19 +48,20 @@ define([
             return [base, params.join('&')].join('?');
         }
 
-        function handlePage(data) {
+        function handlePage(data, textStatus) {
             l = l.concat(data.values);
 
             /* FIXME */
             if(data.metadata.next_marker == null ) {
                 d.resolve(l);
             } else {
-                $.getJSON(constructURL(base_url, query_params.concat(['marker=' + data.metadata.next_marker])), handlePage);
+                $.getJSON(constructURL(base_url, query_params.concat(['marker=' + data.metadata.next_marker])), handlePage).error(function() {d.reject();});
             }
         }
 
-        $.getJSON(constructURL(base_url, query_params), handlePage);
+        $.getJSON(constructURL(base_url, query_params), handlePage).error(function() {d.reject();});
         return d.promise();
+
     }
 
     var SavedGraph = Backbone.Model.extend({
@@ -186,6 +187,9 @@ define([
         },
         getLink: function () {
             return '#entities/' + this.id;
+        },
+        getHostInfo: function() {
+            return new HostInfo({agent_id: this.get('agent_id')});
         }
     });
 
@@ -648,10 +652,71 @@ define([
         }
     });
 
+    var HostInfo = Backbone.Model.extend({
+        url: function() {
+            return BASE_URL + '/views/agent_host_info?agentId=' + this.get('agent_id') + '&include=cpus&include=filesystems&include=memory';
+        },
+        initialize: function() {
+            this.cpu_total = undefined;
+            this.cpu_idle = undefined;
+
+            this.last_cpu_total = undefined;
+            this.last_cpu_idle = undefined;
+        },
+
+        sync: function(method, model, options) {
+            cpu_record = function(model) {
+                this.last_cpu_total = this.cpu_total;
+                this.last_cpu_idle = this.cpu_idle;
+
+                var info = model[0];
+                var totals = _.pluck(info.host_info.cpus.info, 'total');
+                this.cpu_total = _.reduce(totals, function(memo, num){return memo + num;}, 0);
+
+                var idles = _.pluck(info.host_info.cpus.info, 'idle');
+                this.cpu_idle = _.reduce(idles, function(memo, num){return memo + num;}, 0);
+
+                options.success(model);
+            }.bind(this);
+            return depaginatedRequest(this.url()).then(cpu_record, options.error);
+        },
+
+        getCpuPercent: function() {
+            return ((this.cpu_total-this.last_cpu_total) - (this.cpu_idle-this.last_cpu_idle))/(this.cpu_total-this.last_cpu_total) * 100;
+        },
+
+
+        getDiskPercent: function() {
+            return this.getDiskUsed() / this.getDiskTotal() * 100;
+        },
+        getDiskTotal: function() {
+            var info = this.get(0);
+            var root_fs = _.find(info.host_info.filesystems.info, function(fs) {return fs.dir_name == '/';});
+            return root_fs.total * 1024;
+        },
+        getDiskUsed: function() {
+            var info = this.get(0);
+            var root_fs = _.find(info.host_info.filesystems.info, function(fs) {return fs.dir_name == '/';});
+            return root_fs.used * 1024;
+        },
+
+        getRamPercent: function() {
+            return this.getRamUsed()/this.getRamTotal() * 100;
+        },
+        getRamTotal: function() {
+            return this.get(0).host_info.memory.info.total;
+        },
+        getRamUsed: function() {
+            return this.get(0).host_info.memory.info.actual_used;
+
+        }
+    });
+
     return {Account: Account,
             Entity: Entity,
             Check: Check,
             Metric: Metric,
             SavedGraph: SavedGraph,
-            Alarm: Alarm};
+            Alarm: Alarm,
+            HostInfo: HostInfo};
 });
