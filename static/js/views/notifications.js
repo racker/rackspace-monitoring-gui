@@ -25,7 +25,7 @@ define([
             /* selector for the different notification types */
             this._notificationTypes = $('<select>');
             this._notificationTypes.change(this._handleTypeSelection.bind(this));
-            
+
             this._form = $('<div>');
 
             this.notificationTypesCollection.fetch({success: this._populateNotificationTypes.bind(this), error: function () {
@@ -74,7 +74,7 @@ define([
         template: _.template("<td><a class='details clickable'><%= label %></a></td><td><%= id %></td><td><i class='icon-remove delete clickable'></i></td>"),
 
         detailsHandler: function () {
-            window.location.hash = 'notification_plans/' + this.model.id;
+            Backbone.history.navigate('notification_plans/' + this.model.id, true);
         },
 
         deleteHandler: function () {
@@ -115,7 +115,7 @@ define([
                 plan.fetch({
                     success: function(np) {
                         this._modal.hide();
-                        window.location.hash = 'notification_plans/' + np.id;
+                        Backbone.history.navigate('notification_plans/' + np.id, true);
                     }.bind(this), error: function(e, xhr) {
                         this._modal.hide();
                     }.bind(this)
@@ -455,13 +455,13 @@ define([
     var renderNotificationPlanDetails = function (pid) {
 
         function _fetchError (collection) {
-            window.location.hash = 'notifications';
+            Backbone.history.navigate('notifications', true);
         }
 
         function _fetchSuccess (collection) {
             var plan = collection.get(pid);
             if (!plan) {
-                window.location.hash = 'notifications';
+                Backbone.history.navigate('notifications', true);
                 return;
             }
 

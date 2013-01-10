@@ -14,7 +14,7 @@ define([
         template: _.template("<td><a class='details clickable'><%= label %></a></td><td><%= id %></td><td><i class='icon-remove delete clickable'></i></td>"),
 
         detailsHandler: function () {
-            window.location.hash = 'entities/' + this.model.get('entity_id') + '/alarms/' + this.model.id;
+            Backbone.history.navigate('entities/' + this.model.get('entity_id') + '/alarms/' + this.model.id, true);
         },
 
         deleteHandler: function () {
@@ -79,7 +79,7 @@ define([
                     success: function(a) {
                         this._modal.hide();
                         this.collection.add(a);
-                        window.location.hash = 'entities/' + a.get('entity_id') + '/alarms/' + a.id;
+                        Backbone.history.navigate('entities/' + a.get('entity_id') + '/alarms/' + a.id, true);
                     }.bind(this), error: function(a) {
                         this.error('Error fetching ' + this.name);
                         this._modal.hide();
@@ -452,14 +452,14 @@ define([
 
         var entity = App.getInstance().account.entities.get(eid);
         if (!entity) {
-            window.location.hash = 'entities';
+            Backbone.history.navigate('entities', true);
             return;
         }
 
         function _fetchSuccess (collection) {
             var alarm = collection.get(aid);
             if (!alarm) {
-                window.location.hash = 'entities/' + entity.id;
+                Backbone.history.navigate('entities/' + entity.id, true);
                 return;
             }
                 
@@ -475,7 +475,7 @@ define([
         }
 
         function _fetchError (collection) {
-            window.location.hash = 'entities';
+            Backbone.history.navigate('entities', true);
         }
 
         entity.alarms.fetch({success: _fetchSuccess, error: _fetchError});

@@ -224,7 +224,7 @@ define([
         }
 
         function _fetch_error() {
-            window.location.hash = "#grapher";
+            Backbone.history.navigate("#grapher", true);
             $("#chart-container").empty();
 
         }

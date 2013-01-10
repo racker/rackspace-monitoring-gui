@@ -30,7 +30,7 @@ define([
 
     if (!router) {
       var Router = Backbone.Router.extend({
-          
+
           routes: {
               "notifications": "notificationsRoute",
               "notification_plans/:id": "notificationPlanDetailsRoute",
@@ -45,7 +45,7 @@ define([
           },
 
           defaultRoute: function(path) {
-              window.location.hash = 'entities';
+              Backbone.history.navigate('entities', true);
           }
       });
 
@@ -60,6 +60,24 @@ define([
   start = function () {
       if (!started) {
         router = initialize();
+
+
+        // Created by Kendall Buchanan, (https://github.com/kendagriff)
+        // Modified by Paul English, (https://github.com/nrub)
+        // MIT licence
+        // Version 0.0.2
+        var _loadUrl = Backbone.History.prototype.loadUrl;
+
+        Backbone.History.prototype.loadUrl = function(fragmentOverride) {
+          var matched = _loadUrl.apply(this, arguments),
+              fragment = this.fragment = this.getFragment(fragmentOverride);
+
+          if (!/^\//.test(fragment)) fragment = '/' + fragment;
+          if (window._gaq !== undefined) window._gaq.push(['_trackPageview', fragment]);
+
+          return matched;
+        };
+
         Backbone.history.start();
         started = true;
       }
