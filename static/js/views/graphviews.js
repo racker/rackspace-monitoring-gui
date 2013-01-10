@@ -178,6 +178,9 @@ define([
                 .renderVerticalGridLines(true)
                 .brushOn(false);
 
+
+            chart.yAxis().tickFormat(d3.format("4s"));
+
             return chart;
         },
 
