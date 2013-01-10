@@ -17,6 +17,10 @@ define([
             this._details = $('<dl>').addClass('dl-horizontal');
             body.append(this._details);
 
+            body.append($('<h3>').append('host info'));
+            this._hostinfo = $('<div>');
+            body.append(this._hostinfo);
+
             body.append($('<h3>').append('ip_addresses'));
             this._ipAddresses = $('<dl>').addClass('dl-horizontal');
             body.append(this._ipAddresses);
@@ -28,6 +32,11 @@ define([
             this._checks = $('<div>');
             body.append(this._checks);
 
+
+            this._hostinfoView = new HostInfoView({
+                el: this._hostinfo,
+                model: this.model.getHostInfo()
+            });
             this._detailsView = new Views.KeyValueView({
                 el: this._details,
                 model: this.model,
@@ -84,7 +93,13 @@ define([
         },
 
         render: function () {
+
             this._detailsView.render(this.editState);
+
+            clearInterval(this._hostinfo_interval);
+            this._hostinfoView.render();
+            this._hostinfo_interval = setInterval(this._hostinfoView.render.bind(this._hostinfoView), 5000);
+
             this._ipAddressesView.render(this.editState);
             this._metadataView.render(this.editState);
 
@@ -153,6 +168,82 @@ define([
             e.save({}, {success: saveSuccess.bind(this), error: saveError.bind(this)});
         }
 
+    });
+
+    var HostInfoView = Backbone.View.extend({
+        initialize: function() {
+            this.$el.empty();
+
+            this._list = $('<dl>').addClass('hostinfo dl-horizontal');
+            this.$el.append(this._list);
+
+            this._ram_bar = $('<div>').addClass('progress');
+            this._ram_text = $('<span>');
+            this._list.append(
+                    $('<dt>').append('Memory'),
+                    $('<dd>').append(this._ram_bar, this._ram_text));
+
+            this._disk_bar = $('<div>').addClass('progress');
+            this._disk_text = $('<span>');
+            this._list.append(
+                    $('<dt>').append('Disk'),
+                    $('<dd>').append(this._disk_bar, this._disk_text));
+
+            this._cpu_bar = $('<div>').addClass('progress');
+            this._cpu_text = $('<span>');
+            this._list.append(
+                    $('<dt>').append('CPU'),
+                    $('<dd>').append(this._cpu_bar, this._cpu_text));
+        },
+        render: function() {
+            function draw_success() {
+                this._ram_bar.empty();
+                this._disk_bar.empty();
+                this._cpu_bar.empty();
+
+                this._ram_text.empty();
+                this._disk_text.empty();
+                this._cpu_text.empty();
+
+                this._ram_bar.append($('<div>').addClass('bar').attr('style', 'width: ' + this.model.getRamPercent() + '%'));
+                this._disk_bar.append($('<div>').addClass('bar').attr('style', 'width: ' + this.model.getDiskPercent() + '%'));
+                this._cpu_bar.append($('<div>').addClass('bar').attr('style', 'width: ' + this.model.getCpuPercent() + '%'));
+
+                this._ram_text.append(this.humanizeBytes(this.model.getRamUsed()) + ' of ' + this.humanizeBytes(this.model.getRamTotal()));
+                this._disk_text.append(this.humanizeBytes(this.model.getDiskUsed()) + ' of ' + this.humanizeBytes(this.model.getDiskTotal()));
+                var cpu_percent = Math.floor(this.model.getCpuPercent()*100)/100;
+                if( isNaN(cpu_percent)) {
+                    this._cpu_text.append("(pending)");
+                } else {
+                    this._cpu_text.append( cpu_percent + '%');
+                }
+            }
+
+            function draw_failure() {
+                this._ram_bar.empty();
+                this._disk_bar.empty();
+                this._cpu_bar.empty();
+
+                this._ram_text.empty();
+                this._disk_text.empty();
+                this._cpu_text.empty();
+
+                this._ram_text.append("(agent not connected)");
+                this._disk_text.append("(agent not connected)");
+                this._cpu_text.append("(agent not connected)");
+            }
+
+            this.model.fetch({
+                success: draw_success.bind(this),
+                error: draw_failure.bind(this)
+            });
+        },
+        humanizeBytes: function(bytes) {
+            //From http://stackoverflow.com/questions/4498866/actual-numbers-to-the-human-readable-values
+            var s = ['bytes', 'kB', 'MB', 'GB', 'TB', 'PB'];
+            var e = Math.floor(Math.log(bytes) / Math.log(1024));
+            return (bytes / Math.pow(1024, Math.floor(e))).toFixed(2) + " " + s[e];
+        }
     });
 
     var renderEntityDetails = function (id) {
