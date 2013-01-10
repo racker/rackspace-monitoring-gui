@@ -96,9 +96,9 @@ define([
 
             this._detailsView.render(this.editState);
 
-            clearInterval(this._hostinfo_interval);
+            clearInterval(App._hostinfo_interval);
             this._hostinfoView.render();
-            this._hostinfo_interval = setInterval(this._hostinfoView.render.bind(this._hostinfoView), 5000);
+            App._hostinfo_interval = setInterval(this._hostinfoView.render.bind(this._hostinfoView), 5000);
 
             this._ipAddressesView.render(this.editState);
             this._metadataView.render(this.editState);

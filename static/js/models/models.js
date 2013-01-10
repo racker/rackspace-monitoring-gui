@@ -609,7 +609,6 @@ define([
             return BASE_URL + '/views/agent_host_info?agentId=' + this.get('agent_id') + '&include=cpus&include=filesystems&include=memory';
         },
         initialize: function() {
-
             this.cpu_total = undefined;
             this.cpu_idle = undefined;
 
