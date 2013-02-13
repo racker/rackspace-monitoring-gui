@@ -34,7 +34,7 @@ define([
 
             this._label = $('<dl>').addClass('dl-horizontal');
             this._alarmLabel = $('<input type="text" placeholder="Alarm Label" />');
-            this._label.append('<dt><strong>notification_plan</strong></dt>');
+            this._label.append('<dt><strong>label</strong></dt>');
             this._label.append($('<dd>').append(this._alarmLabel));
             body.append(this._label);
 
