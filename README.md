@@ -10,7 +10,7 @@ setup
 1. npm install
 2. setup and run mongodb server
 3. modify settings.js
-4. ./bin/raxmongui -c </path/to/local_settings.js>
+4. ./bin/raxmongui -c /path/to/local_settings.js
 
 tests
 =====
