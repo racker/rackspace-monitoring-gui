@@ -597,6 +597,7 @@ define([
                 }
 
                 if(_.indexOf(this.listStringFields, field.name) !== -1) {
+                    val = val || [];
                     val = val.join(' ');
                 }
 
