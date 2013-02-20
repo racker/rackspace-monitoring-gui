@@ -46,7 +46,7 @@ define([
 
             // allow custom template
             this.keyValueTemplate = opts.keyValueTemplate || this.keyValueTemplate;
-            
+
             this.json = opts.json || false;
             this.modelKey = this.modelKey || opts.modelKey;
             this.editableKeys = this.editableKeys || opts.editableKeys || [];
@@ -544,6 +544,7 @@ define([
     var FormDetailsView = Backbone.View.extend({
 
         booleanFields: [],
+        listStringFields: [],
 
         viewTemplate: _.template(
             "<dt><strong><%= key %></strong></dt>" +
@@ -595,8 +596,11 @@ define([
                     }
                 }
 
-                v = {key: field.name, value: val || '', description: field.description, optional: field.optional ? '(optional)' : ''};
+                if(_.indexOf(this.listStringFields, field.name) !== -1) {
+                    val = val.join(' ');
+                }
 
+                v = {key: field.name, value: val || '', description: field.description, optional: field.optional ? '(optional)' : ''};
 
                 this.$el.append(t(v));
 
@@ -605,19 +609,25 @@ define([
             return this.$el;
         },
 
+        getValue: function(el) {
+            var key = el.name;
+            if (el.type === 'checkbox') {
+                return el.checked;
+            } else if (el.value) {
+                if(_.indexOf(this.listStringFields, key) !== -1)
+                    return el.value.split(' ');
+                else
+                    return el.value;
+
+            }
+        },
+
         getValues: function () {
             var details = {};
             _.each(this.$el.find('input'), function (el) {
-                var val;
                 var key = el.name;
-                if (el.type === 'checkbox') {
-                    details[key] = el.checked;
-                } else {
-                    if (el.value) {
-                        details[key] = el.value;
-                    }
-                }
-            });
+                details[key] = this.getValue(el);
+            }.bind(this));
             return details;
         }
     });
