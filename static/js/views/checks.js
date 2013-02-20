@@ -233,7 +233,8 @@ define([
     });
 
     var CheckDetails = Views.FormDetailsView.extend({
-        booleanFields: ['starttls', 'follow_redirects', 'ssl']
+        booleanFields: ['starttls', 'follow_redirects', 'ssl'],
+        listStringFields: ['args']
     });
 
     var NewCheckForm = Backbone.View.extend({
@@ -469,7 +470,7 @@ define([
                     _label.html(resultString);
                     var _header = $('<a>').addClass('accordion-toggle').click(function () {_body.collapse('toggle');});
                     _header.append(_label);
-                    
+
                     var _group = $('<div>').addClass('accordion-group').append(
                         $('<div>').addClass('accordion-heading').append(_header),
                         _body
@@ -488,7 +489,7 @@ define([
                 var _testData = $('<div>').addClass('accordion-inner');
                 _testData.append('<dt><h4>details</h4></dt>');
                 _testData.append(this._makeErrorView(response));
-                
+
                 var _body = $('<div>').addClass('accordion-body collapse');
                 _body.append(_testData);
 
@@ -496,7 +497,7 @@ define([
                 _label.html('type: ' + response.type + ' message: ' + response.message);
                 var _header = $('<a>').addClass('accordion-toggle').click(function () {_body.collapse('toggle');});
                 _header.append(_label);
-                
+
                 var _group = $('<div>').addClass('accordion-group').append(
                     $('<div>').addClass('accordion-heading').append(_header),
                     _body
