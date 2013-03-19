@@ -691,12 +691,12 @@ define([
         },
         getDiskTotal: function() {
             var info = this.get(0);
-            var root_fs = _.find(info.host_info.filesystems.info, function(fs) {return fs.dir_name == '/';});
+            var root_fs = _.find(info.host_info.filesystems.info, function(fs) {return fs.dir_name == '/' || fs.dir_name === 'C:\\';});
             return root_fs.total * 1024;
         },
         getDiskUsed: function() {
             var info = this.get(0);
-            var root_fs = _.find(info.host_info.filesystems.info, function(fs) {return fs.dir_name == '/';});
+            var root_fs = _.find(info.host_info.filesystems.info, function(fs) {return fs.dir_name == '/' || fs.dir_name === 'C:\\';});
             return root_fs.used * 1024;
         },
 
