@@ -4,32 +4,28 @@ block header
 
   script(data-main="/js/main", src="/js/extern/require/require.js")
 
-block navbar
-  a.btn.btn-navbar(data-toggle="collapse", data-target=".nav-collapse")
-    span.icon-bar
-    span.icon-bar
-    span.icon-bar
-    span.icon-bar
-  a.brand(href="#entities")= "Rackspace Monitoring Metrics Preview"
-  div.nav-collapse.collapse
-    ul.nav
-      li(id="entities-view-link")
-        a(href="#entities")= "entities"
-    ul.nav
-      li(id="notifications-list-view-link")
-        a(href="#notifications")= "notifications"
-    ul.nav
-      li(id="grapher-view-link")
-        a(href="#grapher")= "grapher"
-    ul.nav.pull-right
-      if session.username
+block utilitynav
+  ul.rs-nav
+    li
+      a(href="#entities") Rackspace Cloud Monitoring Preview
+  ul.rs-nav.rs-pull-right
+    if session.username
         li(id="account-view-link")
           a(href="#account")= session.username+" (#"+session.tenantId+")"
         li
-          a(href="/logout")= "(Logout)"
+          a(href="/logout")= "Logout"
       else
         li
-          a(href="/login")= "(Login)"
+          a(href="/login")= "Login"
+
+block primarynav
+  ul.rs-nav
+    li(id="entities-view-link")
+        a(href="#entities")= "Entities"
+    li(id="notifications-list-view-link")
+        a(href="#notifications")= "Notifications"
+    li(id="grapher-view-link")
+        a(href="#grapher")= "Graphing"
 
 block content
   #entities-view-content.container
@@ -46,3 +42,12 @@ block content
     include loading
   #error-view-content.container.hide
     include error
+
+block footer
+  div.rs-container
+    ul.rs-links
+      li © 2013 Rackspace, US
+      li
+        a(href="http://www.rackspace.com/information/legal/websiteterms")= "Website Terms"
+      li
+        a(href="http://www.rackspace.com/information/legal/privacystatement")= "Privacy Policy"
