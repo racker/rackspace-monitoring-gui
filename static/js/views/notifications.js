@@ -105,8 +105,8 @@ define([
 
     var NotificationPlanListView = Views.ListView.extend({
 
-        name: 'notification_plan',
-        plural: 'notification_plans',
+        name: 'Notification Plan',
+        plural: 'Notification Plans',
         elementView: NotificationPlanView,
 
         handleNew: function (label) {
@@ -139,8 +139,8 @@ define([
 
     var NotificationListView = Views.ListView.extend({
 
-        name: 'notification',
-        plural: 'notifications',
+        name: 'Notification',
+        plural: 'Notifications',
         elementView: NotificationView,
 
         handleNew: function (newNotification) {

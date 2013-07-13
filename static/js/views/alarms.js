@@ -53,8 +53,8 @@ define([
 
     var AlarmListView = Views.ListView.extend({
 
-        name: 'alarm',
-        plural: 'alarms',
+        name: 'Alarm',
+        plural: 'Alarms',
         elementView: AlarmView,
 
         _initialize: function (opts) {
