@@ -364,9 +364,10 @@ define([
         },
 
         _makeHeader: function () {
-            this._editButton = $('<i>')
-                .addClass('icon-pencil clickable')
-                .tooltip({placement: 'right', title: 'edit'});
+            this._editButton = $('<button>')
+                .addClass('clickable rs-btn rs-btn-secondary')
+                .tooltip({placement: 'right', title: 'edit'})
+                .append("Edit Entity");
             this._editButton.on('click', $.throttle(250, this.handleEdit.bind(this)));
 
             this._saveButton = $('<i>')
@@ -385,7 +386,7 @@ define([
                         .addClass('row-fluid')
                         .append(
                             $('<div>').addClass('span12')
-                                .append($('<h2>').addClass('pull-left').append(this.getTitle()))
+                                .append($('<h2>').append(this.getTitle()))
                                 .append(this._editButton)
                                 .append(this._saveButton)
                                 .append(this._cancelButton));
