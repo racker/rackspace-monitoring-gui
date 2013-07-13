@@ -367,7 +367,7 @@ define([
             this._editButton = $('<button>')
                 .addClass('clickable rs-btn rs-btn-secondary')
                 .tooltip({placement: 'right', title: 'edit'})
-                .append("Edit Entity");
+                .append("Edit");
             this._editButton.on('click', $.throttle(250, this.handleEdit.bind(this)));
 
             this._saveButton = $('<i>')
