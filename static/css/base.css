@@ -101,3 +101,10 @@ body {
 .list-header button {
     margin-bottom: 20px;
 }
+
+.loading {
+    background: red;
+    width: 100%;
+    min-height: 250px;
+    background: url("../images/loading_spinner.gif") center center no-repeat;
+}
