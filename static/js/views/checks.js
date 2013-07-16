@@ -25,8 +25,8 @@ define([
 
     var CheckListView = Views.ListView.extend({
 
-        name: 'check',
-        plural: 'checks',
+        name: 'Check',
+        plural: 'Checks',
         elementView: CheckView,
 
         handleNew: function (newCheck) {

@@ -4,8 +4,6 @@
 @import url('./dc.css');
 
 body {
-  padding-top: 60px;
-  padding-bottom: 60px;
 }
 
 .clickable {
@@ -98,4 +96,15 @@ body {
     display: inline-block;
     width: 100px;
     margin: 0 10px 0 0
+}
+
+.list-header button {
+    margin-bottom: 20px;
+}
+
+.loading {
+    background: red;
+    width: 100%;
+    min-height: 250px;
+    background: url("../images/loading_spinner.gif") center center no-repeat;
 }

@@ -6,6 +6,7 @@ html
     meta(name="viewport", content="width=device-width, initial-scale=1.0")
 
     link(rel='stylesheet', href='/css/base.css')
+    link(rel='stylesheet', href='http://cd0561583af076c5d1bb-b0a668e5876bef6fe25684caf71db405.r89.cf1.rackcdn.com/v1.0.0-rc.2/canon.css')
 
     block header
 
@@ -19,14 +20,25 @@ html
           var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
         })();
 
-  body
-    div.navbar.navbar-inverse.navbar-fixed-top
-      div.navbar-inner
-        div.container
-          block navbar
+  body.rs-responsive
 
-    ul.breadcrumb(id="breadcrumb")
-      block breadcrumb
-
-    div.container
-      block content
+    div.rs-wrapper
+      div.rs-nav-utility.rs-fixed-top
+        div.rs-container
+          block utilitynav
+      div.rs-nav-primary.rs-fixed-top
+        div.rs-container
+          div.rs-nav-brand
+            a(href="#entities")
+          block primarynav
+      div.rs-body
+        div.rs-container  
+          div.rs-main
+            div.rs-content.rs-panel
+              div.rs-inner
+                block content
+    div.rs-footer
+      block footer
+    //
+      ul.breadcrumb(id="breadcrumb")
+        block breadcrumb

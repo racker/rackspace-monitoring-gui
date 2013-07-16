@@ -267,20 +267,21 @@ define([
             this._modal.show();
         },
 
-        // Creates Top Row - <h2> and a link to create a new object
+        // Creates Top Row - <h1> and a link to create a new object
         _makeHeader: function () {
-            var createNewLink = $('<i>')
-                .addClass('icon-plus clickable')
+            var createNewLink = $('<button>')
+                .append('Create ' + this.name)
+                .addClass('clickable rs-btn rs-btn-primary')
                 .tooltip({placement: 'right', title: 'create new'});
             createNewLink.on('click', this._showModal.bind(this));
 
             var header = $('<div>')
                 .addClass('row list-header')
-                .append($('<h2>')
-                    .addClass('pull-left')
-                    .append(this.plural)
-                    .append(createNewLink)
-                );
+                .append($('<h1>')
+                   .addClass('rs-product-name')
+                   .append(this.plural)
+                )
+                .append(createNewLink);
             return header;
 
         },
@@ -363,9 +364,10 @@ define([
         },
 
         _makeHeader: function () {
-            this._editButton = $('<i>')
-                .addClass('icon-pencil clickable')
-                .tooltip({placement: 'right', title: 'edit'});
+            this._editButton = $('<button>')
+                .addClass('clickable rs-btn rs-btn-secondary')
+                .tooltip({placement: 'right', title: 'edit'})
+                .append("Edit");
             this._editButton.on('click', $.throttle(250, this.handleEdit.bind(this)));
 
             this._saveButton = $('<i>')
@@ -384,7 +386,7 @@ define([
                         .addClass('row-fluid')
                         .append(
                             $('<div>').addClass('span12')
-                                .append($('<h2>').addClass('pull-left').append(this.getTitle()))
+                                .append($('<h2>').append(this.getTitle()))
                                 .append(this._editButton)
                                 .append(this._saveButton)
                                 .append(this._cancelButton));

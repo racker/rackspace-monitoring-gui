@@ -136,8 +136,8 @@ define([
 
     var EntityListView = Views.ListView.extend({
 
-        name: 'entity',
-        plural: 'entities',
+        name: 'Entity',
+        plural: 'Entities',
         elementView: EntityView,
 
         handleNew: function (label) {
