@@ -106,7 +106,7 @@ define([
         initialize: function() {
 
             this.chart_id = "chart-" + (this.model.id || this.model.cid);
-            this.$el.attr('id', this.chart_id);
+            this.$el.addClass('rs-row').add('<div class="span-12" />').attr('id', this.chart_id);
 
             this.chart = this._constructChart();
 
@@ -177,7 +177,6 @@ define([
                 .renderHorizontalGridLines(true)
                 .renderVerticalGridLines(true)
                 .brushOn(false);
-
 
             chart.yAxis().tickFormat(d3.format("4s"));
 
@@ -327,7 +326,7 @@ define([
             this.$el.empty();
 
             this.$el.addClass('table table-striped table-hover');
-            this.$el.append('<tr><th class="span4">Entity</th><th class="span4">Check</th><th class="span4">Metric</th></th>');
+            this.$el.append('<tr><th>Entity</th><th>Check</th><th>Metric</th></th>');
             _.each(this.model.get('series'), function (s) {
                 this.add(s);
             }.bind(this));
@@ -432,20 +431,20 @@ define([
     var GraphView = Backbone.View.extend({
         initialize: function() {
 
-            this._header = $('<div>').addClass('row-fluid');
+            this._header = $('<div>').addClass('rs-row');
 
-            this._savedGraphs = $('<div>').addClass('dropdown span4');
+            this._savedGraphs = $('<div>').addClass('dropdown span-4');
             this._header.append(this._savedGraphs);
             this.savedGraphListView = new SavedGraphListView({el: this._savedGraphs, collection: App.getInstance().account.graphs});
             this.savedGraphListView.render();
 
-            this._title = $('<div>').addClass('span4').append($('<h4>'));
+            this._title = $('<div>').addClass('span-4').append($('<h4>'));
             this._header.append(this._title);
             this.titleView = new TitleView({el: this._title.find('h4'), model: this.model});
             this.titleView.render();
 
 
-            this._periodSelector = $('<div>').addClass('span4 dropdown');
+            this._periodSelector = $('<div>').addClass('span-4 dropdown');
             this._header.append(this._periodSelector);
             this.periodSelectorView = new PeriodSelectorView({el: this._periodSelector, model: this.model});
             this.periodSelectorView.render();
@@ -453,13 +452,13 @@ define([
             this.$el.append(this._header);
 
 
-            this._plot = $('<div>').addClass('.span12');
+            this._plot = $('<div>');
             this.$el.append(this._plot);
             this.plotterView = new PlotterView({el: this._plot, model: this.model});
             this.plotterView.render();
 
             this._legend = $('<table>');
-            this.$el.append($('<div>').addClass('.span12').append(this._legend));
+            this.$el.append($('<div>').append(this._legend));
             this.legendView = new LegendView({el: this._legend, model: this.model});
             this.legendView.render();
 
