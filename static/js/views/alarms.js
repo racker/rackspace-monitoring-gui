@@ -21,6 +21,8 @@ define([
             this.model.destroy({wait: true});
             this._modal.hide();
         }
+    }, {
+        columnHeadings: ['Label', 'ID', 'Delete']
     });
 
     var NewAlarmModal = Views.Modal.extend({

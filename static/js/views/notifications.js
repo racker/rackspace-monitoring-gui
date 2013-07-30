@@ -81,6 +81,8 @@ define([
             this.model.destroy({wait: true});
             this._modal.hide();
         }
+    }, {
+        columnHeadings: ['Label', 'ID', 'Delete']
     });
 
     var NotificationView = Views.ListElementView.extend({
@@ -101,6 +103,8 @@ define([
             $(this.el).html(this.template(n));
             return this;
         }
+    }, {
+        columnHeadings: ['Label', 'ID', 'Type', 'Details', 'Delete']
     });
 
     var NotificationPlanListView = Views.ListView.extend({
