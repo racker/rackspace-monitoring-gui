@@ -311,9 +311,20 @@ define([
 
         render: function()
         {
+            var c, table, headerRow;
+            c = this._filteredCollection();
 
-            var c = this._filteredCollection();
-            $(this.el).find('table').empty();
+            table = $(this.el).find('table');
+            table.empty();
+
+            if (this.elementView.columnHeadings) {
+                headerRow = $('<tr>');
+                this.elementView.columnHeadings.forEach(function(heading) {
+                    headerRow.append($('<th>').text(heading));
+                });
+                table.append(headerRow);
+            }
+
             if (c.each) {
                 c.each(function (m) { this.add(m); }.bind(this));
             } else {
