@@ -300,7 +300,8 @@ define([
         // Creates List Body - <table>
         _makeBody: function () {
             var body = $('<div>');
-            body.append($('<table>').addClass('table table-striped table-hover'));
+            body.append($('<table>').addClass('table table-condensed monitoring-item-table'));
+
             return body;
         },
 
