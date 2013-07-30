@@ -1,9 +1,9 @@
 @import url('./bootstrap.css');
-@import url('./bootstrap-responsive.css');
 @import url('./jquery-ui.css');
 @import url('./dc.css');
 
 body {
+  min-width: 800px;
 }
 
 .clickable {
