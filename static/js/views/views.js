@@ -276,7 +276,7 @@ define([
             createNewLink.on('click', this._showModal.bind(this));
 
             var header = $('<div>')
-                .addClass('row list-header')
+                .addClass('list-header')
                 .append($('<h1>')
                    .addClass('rs-product-name')
                    .append(this.plural)
@@ -299,7 +299,7 @@ define([
 
         // Creates List Body - <table>
         _makeBody: function () {
-            var body = $('<div>').addClass('row');
+            var body = $('<div>');
             body.append($('<table>').addClass('table table-striped table-hover'));
             return body;
         },
