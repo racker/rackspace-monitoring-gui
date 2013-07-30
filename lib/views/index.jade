@@ -28,19 +28,19 @@ block primarynav
         a(href="#grapher")= "Graphing"
 
 block content
-  #entities-view-content.container
-  #notifications-list-view-content.container.hide
-  #notification-plan-details-view-content.container.hide
-  #entity-details-view-content.container.hide
-  #check-details-view-content.container.hide
-  #alarm-details-view-content.container.hide
-  #grapher-view-content.container.hide
+  #entities-view-content
+  #notifications-list-view-content.hide
+  #notification-plan-details-view-content.hide
+  #entity-details-view-content.hide
+  #check-details-view-content.hide
+  #alarm-details-view-content.hide
+  #grapher-view-content.hide
     include grapher
-  #account-view-content.container.hide
+  #account-view-content.hide
     include account
-  #loading-view-content.container
+  #loading-view-content
     include loading
-  #error-view-content.container.hide
+  #error-view-content.hide
     include error
 
 block footer
