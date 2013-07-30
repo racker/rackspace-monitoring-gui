@@ -277,8 +277,8 @@ define([
 
             var header = $('<div>')
                 .addClass('list-header')
-                .append($('<h1>')
-                   .addClass('rs-product-name')
+                .append($('<h2>')
+                   .addClass('rs-page-title')
                    .append(this.plural)
                 )
                 .append(createNewLink);
