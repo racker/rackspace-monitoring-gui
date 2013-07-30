@@ -108,3 +108,7 @@ body {
     min-height: 250px;
     background: url("../images/loading_spinner.gif") center center no-repeat;
 }
+
+table.table.monitoring-item-table {
+  border: 1px solid rgb(221, 221, 221);
+}
