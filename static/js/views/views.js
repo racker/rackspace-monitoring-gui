@@ -376,32 +376,22 @@ define([
         },
 
         _makeHeader: function () {
-            this._editButton = $('<button>')
-                .addClass('clickable rs-btn rs-btn-secondary')
-                .tooltip({placement: 'right', title: 'edit'})
-                .append("Edit");
+            this._editButton = $('<button class="rs-btn rs-btn-action"><span class="rs-cog" /> Edit</button>');
+
             this._editButton.on('click', $.throttle(250, this.handleEdit.bind(this)));
 
-            this._saveButton = $('<i>')
-                .addClass('icon-ok clickable')
-                .tooltip({placement: 'right', title: 'save changes'})
-                .hide();
+            this._saveButton = $('<button class="rs-btn rs-btn-action">Save</button>').hide();
             this._saveButton.on('click', $.throttle(250, this.handleSave.bind(this)));
 
-            this._cancelButton = $('<i>')
-                .addClass('icon-remove clickable')
-                .tooltip({placement: 'right', title: 'cancel'})
-                .hide();
+            this._cancelButton = $('<button class="rs-btn rs-btn-action">Cancel</button>').hide();
             this._cancelButton.on('click', $.throttle(250, this.handleCancel.bind(this)));
 
-            return $('<div>')
-                        .addClass('row-fluid')
-                        .append(
-                            $('<div>').addClass('span12')
-                                .append($('<h2>').append(this.getTitle()))
-                                .append(this._editButton)
-                                .append(this._saveButton)
-                                .append(this._cancelButton));
+            return $('<div class="rs-row">')
+                        .append($('<div class="span-8">').append($('<h2>').append(this.getTitle())))
+                        .append($('<div class="rs-btn-group pull-right">')
+                                .append(this._editButton).append(this._saveButton).append(this._cancelButton))
+                        .append('<div class="clearfix">')
+                        .append('<hr/>');
         },
 
         _makeBody: function() {
