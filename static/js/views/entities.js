@@ -13,25 +13,32 @@ define([
 
         _makeBody: function() {
             var body = $('<div>');
-            body.append($('<h3>').append('details'));
-            this._details = $('<dl>').addClass('dl-horizontal');
-            body.append(this._details);
-
-            body.append($('<h3>').append('host info'));
+            body.append($('<h3>').append('Right Now'));
             this._hostinfo = $('<div>');
             body.append(this._hostinfo);
 
-            body.append($('<h3>').append('ip_addresses'));
+            body.append($('<hr>'));
+
+            body.append($('<h3>').append('Details'));
+            this._details = $('<dl>').addClass('dl-horizontal');
+            body.append(this._details);
+
+            body.append($('<hr>'));
+
+            body.append($('<h3>').append('IP Addresses'));
             this._ipAddresses = $('<dl>').addClass('dl-horizontal');
             body.append(this._ipAddresses);
 
-            body.append($('<h3>').append('metadata'));
+            body.append($('<hr>'));
+
+            body.append($('<h3>').append('Metadata'));
             this._metadata = $('<dl>').addClass('dl-horizontal');
             body.append(this._metadata);
 
+            body.append($('<hr>'));
+
             this._checks = $('<div>');
             body.append(this._checks);
-
 
             this._hostinfoView = new HostInfoView({
                 el: this._hostinfo,
@@ -42,7 +49,7 @@ define([
                 model: this.model,
                 editKeys: false,
                 editableKeys: ['label', 'agent_id'],
-                ignoredKeys: ['ip_addresses', 'metadata', 'checks'],
+                ignoredKeys: ['ip_addresses', 'metadata', 'checks', 'id', 'label', 'managed'],
                 formatters: {created_at: function (val) {return (new Date(val));},
                              updated_at: function (val) {return (new Date(val));}}
             });
@@ -188,7 +195,7 @@ define([
             this._disk_bar = $('<div>').addClass('progress');
             this._disk_text = $('<span>');
             this._list.append(
-                    $('<dt>').append('Disk'),
+                    $('<dt>').append('Filesystem'),
                     $('<dd>').append(this._disk_bar, this._disk_text));
 
             this._cpu_bar = $('<div>').addClass('progress');
@@ -215,7 +222,7 @@ define([
                 this._disk_text.append(this.humanizeBytes(this.model.getDiskUsed()) + ' of ' + this.humanizeBytes(this.model.getDiskTotal()));
                 var cpu_percent = Math.floor(this.model.getCpuPercent()*100)/100;
                 if( isNaN(cpu_percent)) {
-                    this._cpu_text.append("(pending)");
+                    this._cpu_text.append("Calculting...");
                 } else {
                     this._cpu_text.append( cpu_percent + '%');
                 }
