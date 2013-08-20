@@ -538,10 +538,10 @@ define([
 
             this._editButton.on('click', $.throttle(250, this._handleEdit.bind(this)));
 
-            this._saveButton = $('<button class="rs-btn rs-btn-action">Save</button>').hide();
+            this._saveButton = $('<button class="rs-btn rs-btn-primary">Save</button>').hide();
             this._saveButton.on('click', $.throttle(250, this._handleSave.bind(this)));
 
-            this._cancelButton = $('<button class="rs-btn rs-btn-action">Cancel</button>').hide();
+            this._cancelButton = $('<button class="rs-btn rs-btn-link">Cancel</button>').hide();
             this._cancelButton.on('click', $.throttle(250, this._handleCancel.bind(this)));
 
             this._titleBox = $('<div class="span-8">').append(this._makeTitle());
