@@ -339,9 +339,8 @@ define([
                 el: this._alarm,
                 model: this.model,
                 editKeys: false,
-                editableKeys: ['label'],
-                ignoredKeys: ['metadata', 'criteria',
-                              'notification_plan_id'],
+                editableKeys: [],
+                ignoredKeys: ['label', 'disabled', 'metadata', 'criteria', 'notification_plan_id'],
                 formatters: {created_at: function (val) {return (new Date(val));},
                              updated_at: function (val) {return (new Date(val));}}
             });
@@ -378,50 +377,20 @@ define([
             return body;
         },
 
-        handleSave: function () {
+        getFormContents: function () {
+            var newAlarm = this._alarmView.getValues();
+            newAlarm.metadata = this._metadataView.getValues();
+            newAlarm.notification_plan_id = this._notificationsView.getValues();
+            newAlarm.criteria = this._criteriaView.getValues();
 
-            var _success = function (model) {
-                this.editState = false;
-                this.model.fetch();
-            };
-
-            var _error = function (model, xhr) {
-                var error = {message: 'Unknown Error', details: 'Try again later'};
-                try {
-                    var r = JSON.parse(xhr.responseText);
-                    error.message = r.message;
-                    error.details = r.details;
-                } catch (e) {}
-
-                this.displayError(error);
-                this.model.fetch();
-            };
-
-            var new_alarm = this._alarmView.getValues();
-            new_alarm.metadata = this._metadataView.getValues();
-            new_alarm.notification_plan_id = this._notificationsView.getValues();
-            new_alarm.criteria = this._criteriaView.getValues();
-
-            this.model.save(new_alarm, {success: _success.bind(this), error: _error.bind(this)});
+            return newAlarm;
         },
 
         render: function () {
-
-            this._alarmView.render(this.editState);
-            this._metadataView.render(this.editState);
-            this._notificationsView.render(this.editState);
-            this._criteriaView.render(this.editState);
-
-            if(this.editState) {
-                this._editButton.hide();
-                this._saveButton.show();
-                this._cancelButton.show();
-            } else {
-                this._saveButton.hide();
-                this._cancelButton.hide();
-                this._editButton.show();
-            }
-
+            this._alarmView.render(this.inEditState());
+            this._metadataView.render(this.inEditState());
+            this._notificationsView.render(this.inEditState());
+            this._criteriaView.render(this.inEditState());
         }
     });
 

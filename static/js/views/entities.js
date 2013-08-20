@@ -73,56 +73,26 @@ define([
             return body;
         },
 
-        handleSave: function () {
-            var _success = function (model) {
-                this.editState = false;
-                this.model.fetch();
-            };
-
-            var _error = function (model, xhr) {
-                var error = {message: 'Unknown Error', details: 'Try again later'};
-                try {
-                    var r = JSON.parse(xhr.responseText);
-                    error.message = r.message;
-                    error.details = r.details;
-                } catch (e) {}
-
-                this.displayError(error);
-                this.model.fetch();
-            };
-
+        getFormContents: function () {
             var newEntity = this._detailsView.getChanged();
 
             newEntity.ip_addresses = this._ipAddressesView.getValues();
             newEntity.metadata = this._metadataView.getValues();
 
-            this.model.save(newEntity, {success: _success.bind(this), error: _error.bind(this)});
+            return newEntity;
         },
 
         render: function () {
-
-            this._detailsView.render(this.editState);
+            this._detailsView.render(this.inEditState());
+            this._ipAddressesView.render(this.inEditState());
+            this._metadataView.render(this.inEditState());
 
             clearInterval(App._hostinfo_interval);
             this._hostinfoView.render();
             App._hostinfo_interval = setInterval(this._hostinfoView.render.bind(this._hostinfoView), 5000);
 
-            this._ipAddressesView.render(this.editState);
-            this._metadataView.render(this.editState);
-
             this.model.checks.fetch();
-
-            if(this.editState) {
-                this._editButton.hide();
-                this._saveButton.show();
-                this._cancelButton.show();
-            } else {
-                this._saveButton.hide();
-                this._cancelButton.hide();
-                this._editButton.show();
-            }
         }
-
     });
 
     var EntityView = Views.ListElementView.extend({

@@ -555,8 +555,8 @@ define([
                 el: this._check,
                 model: this.model,
                 editKeys: false,
-                editableKeys: ['label', 'timeout', 'period'],
-                ignoredKeys: ['metadata', 'details',
+                editableKeys: ['timeout', 'period'],
+                ignoredKeys: ['label', 'metadata', 'details',
                               'monitoring_zones_poll',
                               'entity_id', 'target_hostname',
                               'target_alias', 'target_resolver'],
@@ -572,7 +572,7 @@ define([
             App.getInstance().account.check_types.fetch({
                 success: function (collection) {
                     this._checkType = collection.get(this.model.get('type'));
-                    this._detailsView.render(this.editState, this._checkType);
+                    this._detailsView.render(this.inEditState(), this._checkType);
                 }.bind(this),
                 error: function () {
                     this._details.append('failed to fetch check types');
@@ -593,65 +593,35 @@ define([
             return body;
         },
 
-        handleSave: function () {
-
-            var _success = function (model) {
-                this.editState = false;
-                this.model.fetch();
-            };
-
-            var _error = function (model, xhr) {
-                var error = {message: 'Unknown Error', details: 'Try again later'};
-                try {
-                    var r = JSON.parse(xhr.responseText);
-                    error.message = r.message;
-                    error.details = r.details;
-                } catch (e) {}
-
-                this.displayError(error);
-                this.model.fetch();
-            };
-
-            var new_check = this._checkView.getValues();
+        getFormContents: function () {
+            var newCheck = this._checkView.getValues();
 
             if (this.model.get('type').indexOf("remote.") === 0) {
                 var target = this._targetView.getValues();
-                new_check[target.type] = target.value;
-                new_check.monitoring_zones_poll = this._monitoringZonesView.getValues();
+                newCheck[target.type] = target.value;
+                newCheck.monitoring_zones_poll = this._monitoringZonesView.getValues();
             }
-            new_check.metadata = this._metadataView.getValues();
-            new_check.details = this._detailsView.getValues();
+            newCheck.metadata = this._metadataView.getValues();
+            newCheck.details = this._detailsView.getValues();
 
-            this.model.save(new_check, {success: _success.bind(this), error: _error.bind(this)});
-
+            return newCheck;
         },
 
         render: function () {
             this.model.getEntity().alarms.fetch();
 
             if (this._checkType) {
-                this._detailsView.render(this.editState, this._checkType);
+                this._detailsView.render(this.inEditState(), this._checkType);
             }
-            this._checkView.render(this.editState);
-            this._metadataView.render(this.editState);
+            this._checkView.render(this.inEditState());
+            this._metadataView.render(this.inEditState());
 
             if (this._monitoringZonesView) {
-                this._monitoringZonesView.render(this.editState);
+                this._monitoringZonesView.render(this.inEditState());
             }
             if (this._targetView) {
-                this._targetView.render(this.editState);
+                this._targetView.render(this.inEditState());
             }
-
-            if(this.editState) {
-                this._editButton.hide();
-                this._saveButton.show();
-                this._cancelButton.show();
-            } else {
-                this._saveButton.hide();
-                this._cancelButton.hide();
-                this._editButton.show();
-            }
-
         }
     });
 

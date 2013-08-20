@@ -112,3 +112,11 @@ body {
 table.table.monitoring-item-table {
   border: 1px solid rgb(221, 221, 221);
 }
+
+h2.monitoring-item-title, input.monitoring-item-title {
+  font-size: 28px;
+  font-weight: 600;
+  padding: 0 0 4px 0;
+  margin: 0 0 10px 0;
+  height: auto;
+}

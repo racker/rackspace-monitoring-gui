@@ -7,6 +7,12 @@ define([
   'jquerydebounce'
 ], function($, Backbone, _, App, Models) {
 
+    var DETAIL_VIEW_STATE = {
+        VIEW: 'VIEW',
+        SAVE: 'SAVE',
+        EDIT: 'EDIT'
+    };
+
     /**
      * Generic Key Value Object View
      * @extends Backbone.View
@@ -20,6 +26,150 @@ define([
      */
     var KeyValueView = Backbone.View.extend({
         tagName: 'dl',
+        className: 'dl-horizontal',
+        keyValueTemplate: _.template(
+            "<dt><strong><%= key %></strong></dt>" +
+            "<dd><%= value %>&nbsp;</dd>"
+        ),
+
+        editKeyValueTemplate: _.template(
+            "<dt><input class='key', type='text' name='<%= key %>', value='<%= key %>'></dt>" +
+            "<dd><input class='value', type='text' name='<%= value %>', value='<%= value %>' /></dd>"
+        ),
+
+        editValueTemplate: _.template(
+            "<dt><strong class='key'><%= key %></strong></dt>" +
+            "<dd><input class='value', type='text' name='<%= value %>', value='<%= value %>' /></dd>"
+        ),
+
+        newKeyValueTemplate: _.template(
+            "<dt><input class='key', type='text'></dt>" +
+            "<dd><input class='value', type='text' /></dd>"
+        ),
+
+        initialize: function (opts) {
+            this.$el.empty();
+
+            // allow custom template
+            this.keyValueTemplate = opts.keyValueTemplate || this.keyValueTemplate;
+
+            this.json = opts.json || false;
+            this.modelKey = this.modelKey || opts.modelKey;
+            this.editableKeys = this.editableKeys || opts.editableKeys || [];
+            this.editKeys = this.editKeys || opts.editKeys || false;
+            this.ignoredKeys = this.ignoredKeys || opts.ignoredKeys || [];
+            this.formatters = this.formatters || opts.formatters || {};
+        },
+
+        handleNew: function (e) {
+            if (e) {
+                $(e.target.parentElement.parentElement).off('click');
+            }
+            var newrow = $('<div>').append(this.newKeyValueTemplate()).on('click', function (e) {
+                this.handleNew(e);
+            }.bind(this));
+            this.$el.append(newrow);
+        },
+
+        resetState: function() {
+            this.render(false);
+        },
+
+        getValues: function () {
+            var labels = $(this.el).find('.key');
+            var values = $(this.el).find('input.value');
+
+            var r = _.reduce(labels, function(memo, label, index, labels) {
+
+                var l = label.value || label.innerText;
+                var v = values[index] ? values[index].value : null;
+
+                if (l && v) {
+                    memo[l] = v;
+                }
+                return memo;
+            }, {});
+
+            return r;
+        },
+
+        getChanged: function() {
+            var values = this.getValues();
+
+            var changedKeys = _.reject(_.keys(values), function (key) {
+                return (this.model.get(key) == values[key]);
+            }.bind(this));
+
+            return _.pick(values, changedKeys);
+        },
+
+        _format: function (value, key) {
+            if (_.contains(_.keys(this.formatters), key)) {
+                value = this.formatters[key](value);
+            }
+            if(!value) {
+                value = '';
+            }
+            return value;
+        },
+
+        render: function (edit) {
+
+            var m = this.json;
+            if (!m) {
+                m = this.modelKey ? this.model.get(this.modelKey) : this.model.toJSON();
+            }
+
+            this.$el.empty();
+            _.each(m, function (value, key) {
+                var row;
+
+                // This should not be rendered.
+                if (_.contains(this.ignoredKeys, key)) {
+                    return;
+                }
+
+                if(edit) {
+
+                    // We want to edit keys and values, but don't specify specific keys.
+                    // (ip_addresses, metadata, etc)
+                    if (this.editKeys && _.isEmpty(this.editableKeys)) {
+                        row = this.editKeyValueTemplate({key:key, value:this._format(value, key)});
+                    }
+                    // We do not want to edit keys, just the values
+                    // (label, agent_id, etc)
+                    else if (_.contains(this.editableKeys, key)) {
+                        row = this.editValueTemplate({key:key, value:this._format(value, key)});
+                    }
+                    // This is rendered, but uneditable
+                    // (created_at, uri, etc)
+                    else {
+                        row = this.keyValueTemplate({key: key, value: this._format(value, key)});
+                    }
+                } else {
+                    row = this.keyValueTemplate({key:key, value:this._format(value, key)});
+                }
+                this.$el.append(row);
+            }.bind(this));
+
+            if (edit && this.editKeys) {
+                this.handleNew();
+            }
+
+            return this.$el;
+        }
+    });
+
+
+    /**
+     * Editable Heading View
+     * @extends Backbone.View
+     *
+     * @param {object} opts Options Object
+     * @param {Backbone.Model} opts.model Backbone model instance
+     */
+    var EditableHeadingView = Backbone.View.extend({
+        tagName: 'h2',
         className: 'dl-horizontal',
         keyValueTemplate: _.template(
             "<dt><strong><%= key %></strong></dt>" +
@@ -227,11 +377,11 @@ define([
             this.plural = this.plural || opts.plural;
             this.elementView = this.elementView || opts.elementView;
 
-            this._errors = $('<div>');
+            this._alerts = $('<div>');
             this._header = this._makeHeader();
             this._body = this._makeBody();
 
-            $(this.el).append(this._errors);
+            $(this.el).append(this._alerts);
             $(this.el).append(this._header);
             $(this.el).append(this._body);
 
@@ -294,7 +444,7 @@ define([
                             .append('x'));
             error.append($('<strong>').append(e.name + ": " + e.message));
             error.append($('<p>').append(e.details));
-            this._errors.append(error);
+            this._alerts.append(error);
         },
 
         // Creates List Body - <table>
@@ -357,37 +507,47 @@ define([
     var DetailsView = Backbone.View.extend({
 
         /* Are we in the edit state? */
-        editState: false,
+        viewState: DETAIL_VIEW_STATE.VIEW,
 
         initialize: function () {
 
             this.$el.empty();
 
             // div for inserting errors
-            this._errors = $('<div>');
+            this._alerts = $('<div>');
 
             this._header = this._makeHeader();
             this._body = this._makeBody();
 
-            $(this.el).append(this._errors);
+            $(this.el).append(this._alerts);
             $(this.el).append(this._header);
             $(this.el).append(this._body);
             this.model.on('change', this.render.bind(this));
         },
 
+        _makeTitle: function() {
+            if (this.viewState === DETAIL_VIEW_STATE.EDIT) {
+                return $('<input class="value monitoring-item-title" type="text">').attr('value', this.getTitle());
+            } else {
+                return $('<h2 class="monitoring-item-title">').append(this.getTitle());
+            }
+        },
+
         _makeHeader: function () {
             this._editButton = $('<button class="rs-btn rs-btn-action"><span class="rs-cog" /> Edit</button>');
 
-            this._editButton.on('click', $.throttle(250, this.handleEdit.bind(this)));
+            this._editButton.on('click', $.throttle(250, this._handleEdit.bind(this)));
 
             this._saveButton = $('<button class="rs-btn rs-btn-action">Save</button>').hide();
-            this._saveButton.on('click', $.throttle(250, this.handleSave.bind(this)));
+            this._saveButton.on('click', $.throttle(250, this._handleSave.bind(this)));
 
             this._cancelButton = $('<button class="rs-btn rs-btn-action">Cancel</button>').hide();
-            this._cancelButton.on('click', $.throttle(250, this.handleCancel.bind(this)));
+            this._cancelButton.on('click', $.throttle(250, this._handleCancel.bind(this)));
+
+            this._titleBox = $('<div class="span-8">').append(this._makeTitle());
 
             return $('<div class="rs-row">')
-                        .append($('<div class="span-8">').append($('<h2>').append(this.getTitle())))
+                        .append(this._titleBox)
                         .append($('<div class="rs-btn-group pull-right">')
                                 .append(this._editButton).append(this._saveButton).append(this._cancelButton))
                         .append('<div class="clearfix">')
@@ -398,35 +558,100 @@ define([
             return $('<div>');
         },
 
+        _refreshTitleBox: function() {
+            this._titleBox.empty();
+            this._titleBox.append(this._makeTitle());
+        },
+
         getTitle: function () {
             return this.model.get('label');
         },
 
-        handleSave: function () {},
-
-        handleCancel: function () {
-            this.editState = false;
-            this.render();
+        inEditState: function() {
+            return this.viewState === DETAIL_VIEW_STATE.EDIT;
         },
 
-        handleEdit: function () {
-            this.editState = true;
-            this.render();
+        setViewState: function(state) {
+          this.viewState = state;
+          this._titleBox.empty().append(this._makeTitle());
+          if (this.viewState === DETAIL_VIEW_STATE.VIEW) {
+              this._saveButton.hide();
+              this._cancelButton.hide();
+              this._editButton.show();
+          } else if (this.viewState === DETAIL_VIEW_STATE.EDIT) {
+              this._editButton.hide();
+              this._saveButton.show().removeAttr('disabled').text('Save');
+              this._cancelButton.show().removeAttr('disabled');
+          } else {
+              this._editButton.hide();
+              this._saveButton.show().removeAttr('disabled').text('Saving...');
+              this._cancelButton.show().removeAttr('disabled');
+          }
+          this.render();
         },
 
-        displayError: function (message) {
-            var error = $('<div>').addClass('alert alert-error');
-            error.append($('<button>')
+        getFormContents: function() {},
+
+        _handleSave: function () {
+            var _success = function (model) {
+                this.setViewState(DETAIL_VIEW_STATE.VIEW);
+                this.model.fetch();
+            };
+
+            var _error = function (model, xhr) {
+                var error = {message: 'Unknown Error', details: 'Try again later'};
+                try {
+                    var r = JSON.parse(xhr.responseText);
+                    error.message = r.message;
+                    error.details = r.details;
+                } catch (e) {}
+
+                this.displayError(error);
+                this.setViewState(DETAIL_VIEW_STATE.VIEW);
+                this.model.fetch();
+            };
+
+            var update = this.getFormContents();
+            update.label = this._titleBox.find('input').val();
+
+            this.model.save(update, {success: _success.bind(this), error: _error.bind(this)});
+            this.setViewState(DETAIL_VIEW_STATE.SAVING);
+        },
+
+        _handleCancel: function () {
+            this.setViewState(DETAIL_VIEW_STATE.VIEW);
+        },
+
+        _handleEdit: function () {
+            this.setViewState(DETAIL_VIEW_STATE.EDIT);
+        },
+
+
+        _displayMessage: function(message, type) {
+            var alert = $('<div>').addClass('alert alert-' + type);
+            alert.append($('<button>')
                             .addClass('close')
                             .attr('data-dismiss', 'alert')
                             .append('x'));
-            error.append($('<strong>').append(message.message));
-            error.append($('<p>').append(message.details));
-            this._errors.append(error);
+            alert.append($('<strong>').append(message.message));
+            if (message.details) {
+                alert.append($('<p>').append(message.details));
+            }
+            this._alerts.append(alert);
+            setTimeout(function() {
+              alert.slideUp('300');
+            }, 3000);
+        },
+
+        displayError: function (message) {
+            this._displayMessage(message, 'error');
+        },
+
+        displaySuccess: function(message) {
+            this._displayMessage(message, 'success');
         },
 
         render: function () {}
-
     });
 
 
@@ -697,6 +922,8 @@ define([
             renderView: renderView,
             'renderAccount': renderAccount,
             'renderLoading': renderLoading,
-            'renderError': renderError};
+            'renderError': renderError,
+            DETAIL_VIEW_STATE: DETAIL_VIEW_STATE
+    };
 
 });

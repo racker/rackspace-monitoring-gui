@@ -198,7 +198,7 @@ define([
             /* dropdown for adding notification plans */
             this._newNotificationDropdown = $('<span>');
             this._newNotificationDropdown.hide();
-            this._newNotificationDropdown.append('<strong>add notification</strong> ');
+            this._newNotificationDropdown.append('<strong>Add Notification</strong> ');
             this._newNotification = $('<select>');
             this._newNotificationDropdown.append(this._newNotification);
             this._newNotification.append(this.select_template({notifications: App.getInstance().account.notifications.toJSON()}));
@@ -273,77 +273,46 @@ define([
                 el: this._notificationPlan,
                 model: this.model,
                 editKeys: false,
-                editableKeys: ['label'],
-                ignoredKeys: ['critical_state', 'ok_state', 'warning_state'],
+                editableKeys: [],
+                ignoredKeys: ['label', 'critical_state', 'ok_state', 'warning_state'],
                 formatters: {created_at: function (val) {return (new Date(val));},
                              updated_at: function (val) {return (new Date(val));}}
             });
 
-            body.append($('<h3>').append('ok_state'));
-            this._okState = $('<div>').addClass('row').addClass('span12');
-            body.append(this._okState);
+            body.append($('<h3>').append('OK Notifications'));
+            this._okState = $('<div>');
             this._okStateView = new NotificationSelectView({el: this._okState, filter: this.model.getOk.bind(this.model)});
+            body.append(this._okState);
+            body.append('<hr/>');
 
-            body.append($('<h3>').append('warning_state'));
-            this._warningState = $('<div>').addClass('row').addClass('span12');
-            body.append(this._warningState);
+            body.append($('<h3>').append('WARNING Notifications'));
+            this._warningState = $('<div>');
             this._warningStateView = new NotificationSelectView({el: this._warningState, filter: this.model.getWarning.bind(this.model)});
+            body.append(this._warningState);
+            body.append('<hr/>');
 
-            body.append($('<h3>').append('critical_state'));
-            this._criticalState = $('<div>').addClass('row').addClass('span12');
-            body.append(this._criticalState);
+            body.append($('<h3>').append('CRITICAL Notifications'));
+            this._criticalState = $('<div>');
             this._criticalStateView = new NotificationSelectView({el: this._criticalState, filter: this.model.getCritical.bind(this.model)});
-
+            body.append(this._criticalState);
 
             return body;
         },
 
-        handleSave: function () {
+        getFormContents: function () {
+            var updatedNotificationPlan = this._notificationPlanView.getValues();
+            updatedNotificationPlan.ok_state = this._okStateView.getValues();
+            updatedNotificationPlan.warning_state = this._warningStateView.getValues();
+            updatedNotificationPlan.critical_state = this._criticalStateView.getValues();
 
-            var _success = function (model) {
-                this.editState = false;
-                this.model.fetch();
-            };
-
-            var _error = function (model, xhr) {
-                var error = {message: 'Unknown Error', details: 'Try again later'};
-                try {
-                    var r = JSON.parse(xhr.responseText);
-                    error.message = r.message;
-                    error.details = r.details;
-                } catch (e) {}
-
-                this.displayError(error);
-                this.model.fetch();
-            };
-
-            var p = this._notificationPlanView.getValues();
-            p.ok_state = this._okStateView.getValues();
-            p.warning_state = this._warningStateView.getValues();
-            p.critical_state = this._criticalStateView.getValues();
-
-            this.model.save(p, {success: _success.bind(this), error: _error.bind(this)});
-
+            return updatedNotificationPlan;
         },
 
         render: function () {
-
-            this._notificationPlanView.render(this.editState);
-            this._okStateView.render(this.editState);
-            this._warningStateView.render(this.editState);
-            this._criticalStateView.render(this.editState);
-
-
-            if(this.editState) {
-                this._editButton.hide();
-                this._saveButton.show();
-                this._cancelButton.show();
-            } else {
-                this._saveButton.hide();
-                this._cancelButton.hide();
-                this._editButton.show();
-            }
-
+            this._notificationPlanView.render(this.inEditState());
+            this._okStateView.render(this.inEditState());
+            this._warningStateView.render(this.inEditState());
+            this._criticalStateView.render(this.inEditState());
         }
     });
 
