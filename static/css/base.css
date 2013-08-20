@@ -128,3 +128,7 @@ h2.monitoring-item-title, input.monitoring-item-title {
 .modal {
   z-index: 1150;
 }
+
+.rs-row {
+  overflow: visible;
+}

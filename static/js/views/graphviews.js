@@ -444,7 +444,7 @@ define([
             this.titleView.render();
 
 
-            this._periodSelector = $('<div>').addClass('span-4 dropdown');
+            this._periodSelector = $('<div>').addClass('span-4 dropdown pull-right');
             this._header.append(this._periodSelector);
             this.periodSelectorView = new PeriodSelectorView({el: this._periodSelector, model: this.model});
             this.periodSelectorView.render();
