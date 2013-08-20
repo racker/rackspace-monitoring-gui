@@ -120,3 +120,11 @@ h2.monitoring-item-title, input.monitoring-item-title {
   margin: 0 0 10px 0;
   height: auto;
 }
+
+.modal-backdrop {
+  z-index: 1140;
+}
+
+.modal {
+  z-index: 1150;
+}
