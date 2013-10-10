@@ -119,9 +119,9 @@ define([
         render: function (edit) {
             this.criteria.empty();
             if (edit) {
-                this.criteria.removeAttr('disabled');
+                this.criteria.removeAttr('readonly');
             } else {
-                this.criteria.attr('disabled', 'disabled');
+                this.criteria.attr('readonly', 'readonly');
             }
             this.criteria.text(this.model.get('criteria'));
             return this.$el;
