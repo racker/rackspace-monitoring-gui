@@ -192,7 +192,7 @@ define([
                 this._disk_text.append(this.humanizeBytes(this.model.getDiskUsed()) + ' of ' + this.humanizeBytes(this.model.getDiskTotal()));
                 var cpu_percent = Math.floor(this.model.getCpuPercent()*100)/100;
                 if( isNaN(cpu_percent)) {
-                    this._cpu_text.append("Calculting...");
+                    this._cpu_text.append("Calculating...");
                 } else {
                     this._cpu_text.append( cpu_percent + '%');
                 }
