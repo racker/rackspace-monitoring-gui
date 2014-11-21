@@ -132,3 +132,22 @@ h2.monitoring-item-title, input.monitoring-item-title {
 .rs-row {
   overflow: visible;
 }
+
+.eol-notice {
+  max-width: 600px;
+  margin: 0 auto 30px !important;
+}
+
+.center-login {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.center-login-form {
+  max-width: 220px;
+  margin: 0 auto;
+}
+
+.eol-notice p, .alert.alert-error p {
+  margin: 0;
+}

@@ -5,29 +5,28 @@ block navbar
 
 block content
   h1= session.username
-  div.row-fluid
-    div.span6.offset3
-      for error in errors
-        div.alert.alert-error= error
-      form.form-horizontal(action="/login", method="POST")
-        div.control-group
-          div.controls
-            input(type="text", name="username", id="username", placeholder="username")
-        div.control-group
-          div.controls
-            input(type="password", name="password", id="password", placeholder="password")
-        div.control-group
-          div.controls
-            label.checkbox
-              | Remember me
-              input(type="checkbox", id="remember_me", name="remember_me", checked="checked")= "Remember me"
-            button.btn(type="submit")= "Sign in"
+  div.alert.alert-error.eol-notice
+    p
+      strong= "EOL Notice for UI Labs"
+      | <br> Thanks for using our preview! UI Labs will be replaced by <a href="https://intelligence.rackspace.com">Cloud Intelligence</a> on Dec 9th, 2014.
+  div.center-login-form
+    for error in errors
+      div.alert.alert-error= error
+    form(action="/login", method="POST")
+      div.control-group
+        div.controls
+          input(type="text", name="username", id="username", placeholder="username")
+      div.control-group
+        div.controls
+          input(type="password", name="password", id="password", placeholder="password")
+      div.control-group
+        div.controls
+          label.checkbox
+            | Remember me
+            input(type="checkbox", id="remember_me", name="remember_me", checked="checked")= "Remember me"
+          button.btn(type="submit")= "Sign in"
 
-  .row-fluid
-    .span3
-    .span6
+  .center-login
       p= "This is a temporary user interface to be used during the preview phase of the Cloud Monitoring Agent and Metric features. Participation in the preview is subject to the terms at "
         a(href="http://www.rackspace.com/information/legal/testterms/", target="_blank")= "http://www.rackspace.com/information/legal/testterms/"
         | .
-
-    .span3
