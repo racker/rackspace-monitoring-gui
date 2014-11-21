@@ -28,6 +28,12 @@ block primarynav
         a(href="#grapher")= "Graphing"
 
 block content
+  div.alert.alert-error
+    a(class="close", data-dismiss="alert", href="#")
+      |&times;
+    p
+      strong= "Please note:"
+      |  UI Labs will be replaced by <a href="https://intelligence.rackspace.com">Cloud Intelligence</a> on Dec 9th, 2014.
   #entities-view-content
   #notifications-list-view-content.hide
   #notification-plan-details-view-content.hide
